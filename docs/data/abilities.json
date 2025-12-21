@@ -1,0 +1,5 @@
+[
+  { "id": "abil_second_wind", "name": "Second Wind", "description": "Regain stamina in a pinch." },
+  { "id": "abil_berserk", "name": "Berserk", "description": "Trade control for raw power." },
+  { "id": "abil_eagle_eye", "name": "Eagle Eye", "description": "Sharpen your perception and aim." }
+]
