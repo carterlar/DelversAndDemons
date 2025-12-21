@@ -74,7 +74,7 @@
 
       <div class="row">
         <select id="itemPick"></select>
-        <button id="addItemBtn">Add</button>
+        <button id="addItemBtn">Add +1</button>
       </div>
 
       <label style="margin-top: 0.75rem;">
@@ -90,6 +90,11 @@
       <div class="muted small">
         Equipped items apply bonuses to stats and derived stats.
       </div>
+
+      <label class="checkboxRow">
+        <input type="checkbox" id="equipInventoryOnlyToggle" />
+        Only allow equipping items that are in inventory
+      </label>
 
       <div id="equipmentContainer"></div>
 
@@ -112,34 +117,3 @@
 
     <div id="tab_abilities" class="tabPanel hidden">
       <h2>Abilities Known</h2>
-
-      <div class="row">
-        <select id="abilityPick"></select>
-        <button id="learnAbilityBtn">Learn</button>
-      </div>
-
-      <div id="abilitiesKnown"></div>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>Derived Stats</h2>
-    <div class="muted small">Derived stats are calculated from effective stats (base + equipment bonuses).</div>
-    <div id="derivedContainer"></div>
-  </section>
-
-  <section class="card actions">
-    <button id="saveBtn">Save Character</button>
-
-    <label class="import">
-      Import Save
-      <input type="file" id="importInput" accept=".json,application/json" hidden />
-    </label>
-
-    <button id="newBtn" class="secondary">New Character</button>
-  </section>
-</main>
-
-<script src="app.js"></script>
-</body>
-</html>
