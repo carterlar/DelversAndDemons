@@ -41,6 +41,7 @@
       <button class="tabBtn" data-tab="equipment">Equipment</button>
       <button class="tabBtn" data-tab="spells">Spells</button>
       <button class="tabBtn" data-tab="abilities">Abilities</button>
+      <button class="tabBtn" data-tab="custom">Custom</button>
     </div>
 
     <div id="tab_stats" class="tabPanel">
@@ -117,3 +118,104 @@
 
     <div id="tab_abilities" class="tabPanel hidden">
       <h2>Abilities Known</h2>
+
+      <div class="row">
+        <select id="abilityPick"></select>
+        <button id="learnAbilityBtn">Learn</button>
+      </div>
+
+      <div id="abilitiesKnown"></div>
+    </div>
+
+    <div id="tab_custom" class="tabPanel hidden">
+      <h2>Custom Content</h2>
+      <div class="muted small">
+        Custom content is saved inside your character file. It does not edit the website’s admin content.
+      </div>
+
+      <div class="twoCol" style="margin-top: 0.75rem;">
+        <section class="subcard">
+          <h3>Custom Items</h3>
+          <div class="row">
+            <select id="customItemSelect"></select>
+            <button id="customItemNewBtn" class="secondary">New</button>
+            <button id="customItemDeleteBtn" class="secondary">Delete</button>
+          </div>
+
+          <label>Name <input id="customItemName" type="text" /></label>
+
+          <label>Category
+            <select id="customItemCategory">
+              <option>Weapon</option>
+              <option>Armor</option>
+              <option>Headwear</option>
+              <option>Trinket</option>
+              <option>Accessory</option>
+              <option>Consumable</option>
+              <option>Tool</option>
+              <option>Other</option>
+            </select>
+          </label>
+
+          <label>Tier (optional) <input id="customItemTier" type="text" placeholder="A / B / C ..." /></label>
+          <label>Description <textarea id="customItemDesc" rows="3"></textarea></label>
+
+          <label class="checkboxRow">
+            <input type="checkbox" id="customItemEquippable" />
+            Equippable
+          </label>
+
+          <div class="muted small">Bonuses (optional)</div>
+          <div class="bonusGrid" id="customItemBonusGrid"></div>
+
+          <button id="customItemSaveBtn">Save Item</button>
+        </section>
+
+        <section class="subcard">
+          <h3>Custom Spells</h3>
+          <div class="row">
+            <select id="customSpellSelect"></select>
+            <button id="customSpellNewBtn" class="secondary">New</button>
+            <button id="customSpellDeleteBtn" class="secondary">Delete</button>
+          </div>
+          <label>Name <input id="customSpellName" type="text" /></label>
+          <label>Description <textarea id="customSpellDesc" rows="4"></textarea></label>
+          <button id="customSpellSaveBtn">Save Spell</button>
+
+          <hr />
+
+          <h3>Custom Abilities</h3>
+          <div class="row">
+            <select id="customAbilitySelect"></select>
+            <button id="customAbilityNewBtn" class="secondary">New</button>
+            <button id="customAbilityDeleteBtn" class="secondary">Delete</button>
+          </div>
+          <label>Name <input id="customAbilityName" type="text" /></label>
+          <label>Description <textarea id="customAbilityDesc" rows="4"></textarea></label>
+          <button id="customAbilitySaveBtn">Save Ability</button>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Derived Stats</h2>
+    <div class="muted small">Derived stats are calculated from effective stats (base + equipment bonuses).</div>
+    <div id="derivedContainer"></div>
+  </section>
+
+  <section class="card actions">
+    <button id="saveBtn">Save Character</button>
+
+    <label class="import">
+      Import Save
+      <input type="file" id="importInput" accept=".json,application/json" hidden />
+    </label>
+
+    <button id="newBtn" class="secondary">New Character</button>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
