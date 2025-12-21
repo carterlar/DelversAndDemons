@@ -52,6 +52,80 @@
   </div>
 </div>
 
+<div class="panel">
+  <h2>Spell & Ability Catalog</h2>
+
+  <label>
+    Category
+    <select id="catalog-category">
+      <option value="spells">Spells</option>
+      <option value="abilities">Abilities</option>
+    </select>
+  </label>
+
+  <label>
+    Search
+    <input id="catalog-search" placeholder="Search...">
+  </label>
+
+  <label>
+    Select Item
+    <select id="catalog-select"></select>
+  </label>
+
+  <label>
+    Scaling Stat
+    <select id="catalog-stat"></select>
+  </label>
+
+  <label>
+    Tier
+    <select id="catalog-tier">
+      <option>S</option>
+      <option>A</option>
+      <option selected>B</option>
+      <option>C</option>
+      <option>E</option>
+    </select>
+  </label>
+
+  <button id="add-from-catalog">Add to Character</button>
+
+  <hr>
+
+  <h3>Create Custom Spell / Ability</h3>
+
+  <label>Name <input id="custom-name"></label>
+
+  <label>
+    Type
+    <select id="custom-type">
+      <option value="spells">Spell</option>
+      <option value="abilities">Ability</option>
+    </select>
+  </label>
+
+  <label>
+    Scaling Stat
+    <select id="custom-stat"></select>
+  </label>
+
+  <label>
+    Tier
+    <select id="custom-tier">
+      <option>S</option>
+      <option>A</option>
+      <option selected>B</option>
+      <option>C</option>
+      <option>E</option>
+    </select>
+  </label>
+
+  <label>Flavor Text <input id="custom-flavor"></label>
+
+  <button id="create-custom">Create & Add</button>
+</div>
+
 
 <div class="panel">
   <h2>Equipped</h2>
