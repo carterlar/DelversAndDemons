@@ -45,3 +45,24 @@
   color: var(--muted);
   font-size: 0.95rem;
 }
+
+textarea {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #f0f2f5;
+  border: 1px solid var(--border);
+  color: #333;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
