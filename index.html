@@ -32,10 +32,26 @@
     <div id="stats"></div>
   </div>
 
-  <div class="panel">
-  <h2>Inventory</h2>
-  <ul id="inventory"></ul>
+<div class="panel">
+  <div class="tabs">
+    <button class="tab active" data-tab="inventory">Inventory</button>
+    <button class="tab" data-tab="spells">Spells</button>
+    <button class="tab" data-tab="abilities">Abilities</button>
+  </div>
+
+  <div class="tab-content active" id="tab-inventory">
+    <ul id="inventory"></ul>
+  </div>
+
+  <div class="tab-content" id="tab-spells">
+    <ul id="spells"></ul>
+  </div>
+
+  <div class="tab-content" id="tab-abilities">
+    <ul id="abilities"></ul>
+  </div>
 </div>
+
 
 <div class="panel">
   <h2>Equipped</h2>
