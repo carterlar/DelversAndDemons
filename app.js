@@ -5,7 +5,13 @@ let character = {
   race: "",
   class: "",
   level: 1,
-  stats: Object.fromEntries(statsList.map(s => [s, 5]))
+  stats: Object.fromEntries(statsList.map(s => [s, 5])),
+  inventory: [],
+  equipped: {
+    weapon: "",
+    armor: "",
+    headwear: ""
+  }
 };
 
 let allocator = new StatAllocator(character.stats, character.level);
