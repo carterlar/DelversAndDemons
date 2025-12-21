@@ -1,0 +1,5 @@
+[
+  { "id": "spell_firebolt", "name": "Firebolt", "description": "A quick burst of flame." },
+  { "id": "spell_mage_armor", "name": "Mage Armor", "description": "A protective arcane ward." },
+  { "id": "spell_heal", "name": "Heal", "description": "Restore health to a target." }
+]
