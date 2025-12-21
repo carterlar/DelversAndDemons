@@ -15,19 +15,23 @@ const EQUIPMENT_SLOTS = [
 ];
 
 let titles = [];
-let spells = [];
-let abilities = [];
-let items = [];
+let adminSpells = [];
+let adminAbilities = [];
+let adminItems = [];
 
 let character = newCharacter();
 let currentTab = 'stats';
+
+let editingCustomItemId = null;
+let editingCustomSpellId = null;
+let editingCustomAbilityId = null;
 
 /* --------------------
    Character Model
 -------------------- */
 function newCharacter() {
   return {
-    meta: { app: 'Homebrew Character Tracker', version: '1.2' },
+    meta: { app: 'Homebrew Character Tracker', version: '1.3' },
     name: 'New Adventurer',
     titleId: 'none',
     level: 1,
@@ -36,8 +40,7 @@ function newCharacter() {
 
     currency: { gold: 0, silver: 0, copper: 0 },
 
-    // Inventory: array of { id, qty }
-    inventory: [],
+    inventory: [],              // [{id, qty}]
     inventoryNotes: '',
 
     equipped: Object.fromEntries(EQUIPMENT_SLOTS.map(s => [s.key, null])),
@@ -45,31 +48,42 @@ function newCharacter() {
     spellsKnown: [],
     abilitiesKnown: [],
 
-    // Character-level settings (saved with the character file)
-    settings: {
-      equipInventoryOnly: false
-    }
+    // Saved settings
+    settings: { equipInventoryOnly: false },
+
+    // USER-CUSTOM content (lives in save file)
+    customItems: [],
+    customSpells: [],
+    customAbilities: []
   };
 }
 
 /* --------------------
-   Admin lookup
+   Merged content accessors
 -------------------- */
+function getAllItems() {
+  const c = Array.isArray(character.customItems) ? character.customItems : [];
+  return [...adminItems, ...c];
+}
+function getAllSpells() {
+  const c = Array.isArray(character.customSpells) ? character.customSpells : [];
+  return [...adminSpells, ...c];
+}
+function getAllAbilities() {
+  const c = Array.isArray(character.customAbilities) ? character.customAbilities : [];
+  return [...adminAbilities, ...c];
+}
+
 function getItemById(id) {
-  return items.find(x => x.id === id) || null;
+  return getAllItems().find(x => x.id === id) || null;
 }
 
 /* --------------------
-   Inventory helpers (qty)
+   Inventory qty helpers
 -------------------- */
 function normalizeInventory(inv) {
-  // Accepts:
-  // - [{id, qty}]
-  // - ["id","id",...]
-  // - null/undefined
   if (!inv) return [];
   if (Array.isArray(inv) && inv.length && typeof inv[0] === 'string') {
-    // old format -> convert to qty
     const map = new Map();
     for (const id of inv) {
       if (typeof id !== 'string') continue;
@@ -87,7 +101,6 @@ function normalizeInventory(inv) {
       if (!id || qty <= 0) continue;
       cleaned.push({ id, qty });
     }
-    // merge duplicates
     const map = new Map();
     for (const r of cleaned) map.set(r.id, (map.get(r.id) || 0) + r.qty);
     return Array.from(map.entries()).map(([id, qty]) => ({ id, qty }));
@@ -114,13 +127,21 @@ function addInventoryQty(id, delta) {
     else character.inventory[idx].qty = next;
   }
 
-  // If equip-from-inventory is enabled, auto-unequip items that are no longer owned
   enforceEquipInventoryOnly();
 }
 
 /* --------------------
    Equipment bonuses / effective stats
 -------------------- */
+function isEquippableItem(it) {
+  // default true if missing
+  if (!it) return false;
+  if (typeof it.equippable === 'boolean') return it.equippable;
+  // Tools should default to non-equippable if category Tool
+  if (String(it.category || '').toLowerCase() === 'tool') return false;
+  return true;
+}
+
 function aggregateEquipmentBonuses(c) {
   const bonusTotals = Object.fromEntries(CORE_STATS.map(s => [s, 0]));
   const equipped = c.equipped || {};
@@ -181,6 +202,7 @@ function calculateDerived(c) {
 async function init() {
   await loadAdminData();
   bindUI();
+  buildCustomBonusGrid();
   setTab('stats');
   renderAll();
 }
@@ -193,9 +215,9 @@ async function loadAdminData() {
     fetchJson('data/items.json')
   ]);
   titles = t;
-  spells = sp;
-  abilities = ab;
-  items = it;
+  adminSpells = sp;
+  adminAbilities = ab;
+  adminItems = it;
 }
 
 async function fetchJson(path) {
@@ -226,6 +248,10 @@ function bindUI() {
 
   document.getElementById('newBtn').addEventListener('click', () => {
     character = newCharacter();
+    editingCustomItemId = null;
+    editingCustomSpellId = null;
+    editingCustomAbilityId = null;
+    buildCustomBonusGrid();
     setTab('stats');
     renderAll();
   });
@@ -272,6 +298,67 @@ function bindUI() {
     learnAbility(id);
     renderAll();
   });
+
+  // Custom: Item select/new/delete/save
+  document.getElementById('customItemSelect').addEventListener('change', e => {
+    const id = e.target.value || null;
+    loadCustomItemIntoForm(id);
+  });
+  document.getElementById('customItemNewBtn').addEventListener('click', () => {
+    loadCustomItemIntoForm(null);
+  });
+  document.getElementById('customItemDeleteBtn').addEventListener('click', () => {
+    if (!editingCustomItemId) return;
+    character.customItems = (character.customItems || []).filter(x => x.id !== editingCustomItemId);
+    // remove from inventory/equipment if present
+    character.inventory = normalizeInventory(character.inventory).filter(x => x.id !== editingCustomItemId);
+    for (const slot of EQUIPMENT_SLOTS) {
+      if (character.equipped?.[slot.key] === editingCustomItemId) character.equipped[slot.key] = null;
+    }
+    editingCustomItemId = null;
+    renderAll();
+    loadCustomItemIntoForm(null);
+  });
+  document.getElementById('customItemSaveBtn').addEventListener('click', () => {
+    saveCustomItemFromForm();
+    renderAll();
+  });
+
+  // Custom: Spell
+  document.getElementById('customSpellSelect').addEventListener('change', e => {
+    loadCustomSpellIntoForm(e.target.value || null);
+  });
+  document.getElementById('customSpellNewBtn').addEventListener('click', () => loadCustomSpellIntoForm(null));
+  document.getElementById('customSpellDeleteBtn').addEventListener('click', () => {
+    if (!editingCustomSpellId) return;
+    character.customSpells = (character.customSpells || []).filter(x => x.id !== editingCustomSpellId);
+    character.spellsKnown = (character.spellsKnown || []).filter(id => id !== editingCustomSpellId);
+    editingCustomSpellId = null;
+    renderAll();
+    loadCustomSpellIntoForm(null);
+  });
+  document.getElementById('customSpellSaveBtn').addEventListener('click', () => {
+    saveCustomSpellFromForm();
+    renderAll();
+  });
+
+  // Custom: Ability
+  document.getElementById('customAbilitySelect').addEventListener('change', e => {
+    loadCustomAbilityIntoForm(e.target.value || null);
+  });
+  document.getElementById('customAbilityNewBtn').addEventListener('click', () => loadCustomAbilityIntoForm(null));
+  document.getElementById('customAbilityDeleteBtn').addEventListener('click', () => {
+    if (!editingCustomAbilityId) return;
+    character.customAbilities = (character.customAbilities || []).filter(x => x.id !== editingCustomAbilityId);
+    character.abilitiesKnown = (character.abilitiesKnown || []).filter(id => id !== editingCustomAbilityId);
+    editingCustomAbilityId = null;
+    renderAll();
+    loadCustomAbilityIntoForm(null);
+  });
+  document.getElementById('customAbilitySaveBtn').addEventListener('click', () => {
+    saveCustomAbilityFromForm();
+    renderAll();
+  });
 }
 
 function updateCurrencyFromInputs() {
@@ -286,12 +373,8 @@ function updateCurrencyFromInputs() {
 -------------------- */
 function setTab(tab) {
   currentTab = tab;
-
-  document.querySelectorAll('.tabBtn').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === tab);
-  });
-
-  ['stats','inventory','equipment','spells','abilities'].forEach(t => {
+  document.querySelectorAll('.tabBtn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  ['stats','inventory','equipment','spells','abilities','custom'].forEach(t => {
     document.getElementById(`tab_${t}`).classList.toggle('hidden', t !== tab);
   });
 }
@@ -319,12 +402,13 @@ function renderAll() {
   renderAbilityPicker();
   renderSpellsKnown();
   renderAbilitiesKnown();
+
+  renderCustomSelectors();
 }
 
 function renderTitles() {
   const select = document.getElementById('titleSelect');
   select.innerHTML = '';
-
   titles.forEach(t => {
     const opt = document.createElement('option');
     opt.value = t.id;
@@ -339,7 +423,6 @@ function renderTitles() {
     opt.textContent = `Unknown Title (${character.titleId})`;
     select.appendChild(opt);
   }
-
   select.value = character.titleId || 'none';
 }
 
@@ -352,7 +435,6 @@ function renderMeta() {
 function renderStats() {
   const container = document.getElementById('statsContainer');
   container.innerHTML = '';
-
   const { bonuses } = getEffectiveStats(character);
 
   CORE_STATS.forEach(stat => {
@@ -371,16 +453,9 @@ function renderStats() {
 
     const btn = document.createElement('button');
     btn.textContent = '+1';
-    btn.onclick = () => {
-      incrementStat(stat);
-      renderAll();
-    };
-
+    btn.onclick = () => { incrementStat(stat); renderAll(); };
     btn.disabled = character.availablePoints <= 0;
-    if (btn.disabled) {
-      btn.style.opacity = '0.55';
-      btn.style.cursor = 'not-allowed';
-    }
+    if (btn.disabled) { btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; }
 
     row.appendChild(label);
     row.appendChild(value);
@@ -399,7 +474,6 @@ function renderCurrency() {
 function renderDerived() {
   const d = calculateDerived(character);
   const container = document.getElementById('derivedContainer');
-
   container.innerHTML = `
     <div class="derived">HP: <strong>${d.HP}</strong></div>
     <div class="derived">Mana: <strong>${d.Mana}</strong></div>
@@ -411,22 +485,20 @@ function renderDerived() {
 }
 
 /* --------------------
-   Inventory UI (qty)
+   Inventory UI
 -------------------- */
 function renderItemPicker() {
   const select = document.getElementById('itemPick');
   select.innerHTML = '';
 
-  const available = items
-    .slice()
-    .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+  const allItems = getAllItems().slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
 
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = available.length ? '-- select item --' : '-- no items available --';
+  placeholder.textContent = allItems.length ? '-- select item --' : '-- no items available --';
   select.appendChild(placeholder);
 
-  available.forEach(it => {
+  allItems.forEach(it => {
     const opt = document.createElement('option');
     opt.value = it.id;
     const tier = it.tier ? ` (${it.tier})` : '';
@@ -448,13 +520,11 @@ function renderInventory() {
 
   character.inventory = normalizeInventory(character.inventory);
   const inv = character.inventory;
-
   if (!inv.length) {
     container.innerHTML = `<div class="muted">Inventory is empty.</div>`;
     return;
   }
 
-  // Sort inventory by item name (stable-ish)
   const sorted = inv.slice().sort((a,b) => {
     const ia = getItemById(a.id);
     const ib = getItemById(b.id);
@@ -464,8 +534,7 @@ function renderInventory() {
   for (const row of sorted) {
     const it = getItemById(row.id);
     const title = it ? it.name : `Unknown Item (${row.id})`;
-    const desc = it ? (it.description || '') : 'This ID is in the save file but not in admin data/items.json.';
-
+    const desc = it ? (it.description || '') : 'This ID is in the save file but not in admin/custom items.';
     const metaBits = [];
     if (it?.tier) metaBits.push(`Tier ${it.tier}`);
     if (it?.category) metaBits.push(it.category);
@@ -479,11 +548,10 @@ function renderInventory() {
       <div class="titleRow">
         <div>
           <strong>${escapeHtml(title)}</strong>
-          <div class="muted small" style="margin-top:6px;">
-            Qty: <strong>${row.qty}</strong>
-          </div>
+          <div class="muted small" style="margin-top:6px;">Qty: <strong>${row.qty}</strong></div>
           ${meta ? `<div style="margin-top:6px;">${meta}</div>` : ''}
           ${bonusStr ? `<div class="muted small" style="margin-top:6px;">Bonuses: ${escapeHtml(bonusStr)}</div>` : ''}
+          ${it && !isEquippableItem(it) ? `<div class="muted small" style="margin-top:6px;">Not equippable</div>` : ''}
         </div>
         <div class="qtyRow">
           <button class="secondary" data-act="minus">-1</button>
@@ -494,13 +562,9 @@ function renderInventory() {
       ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ''}
     `;
 
-    const btnMinus = card.querySelector('button[data-act="minus"]');
-    const btnPlus = card.querySelector('button[data-act="plus"]');
-    const btnRemove = card.querySelector('button[data-act="remove"]');
-
-    btnMinus.onclick = () => { addInventoryQty(row.id, -1); renderAll(); };
-    btnPlus.onclick = () => { addInventoryQty(row.id, +1); renderAll(); };
-    btnRemove.onclick = () => { addInventoryQty(row.id, -999999); renderAll(); };
+    card.querySelector('button[data-act="minus"]').onclick = () => { addInventoryQty(row.id, -1); renderAll(); };
+    card.querySelector('button[data-act="plus"]').onclick = () => { addInventoryQty(row.id, +1); renderAll(); };
+    card.querySelector('button[data-act="remove"]').onclick = () => { addInventoryQty(row.id, -999999); renderAll(); };
 
     container.appendChild(card);
   }
@@ -519,13 +583,10 @@ function enforceEquipInventoryOnly() {
   character.settings = character.settings || {};
   if (!character.settings.equipInventoryOnly) return;
 
-  // If an equipped item isn't owned, unequip it
   for (const slot of EQUIPMENT_SLOTS) {
     const id = character.equipped?.[slot.key];
     if (!id) continue;
-    if (getInventoryQty(id) <= 0) {
-      character.equipped[slot.key] = null;
-    }
+    if (getInventoryQty(id) <= 0) character.equipped[slot.key] = null;
   }
 }
 
@@ -537,8 +598,9 @@ function renderEquipment() {
   enforceEquipInventoryOnly();
 
   const onlyOwned = !!(character.settings && character.settings.equipInventoryOnly);
-
   const ownedSet = new Set(character.inventory.map(x => x.id));
+  const allItems = getAllItems();
+
   const grid = document.createElement('div');
   grid.className = 'equipGrid';
 
@@ -556,8 +618,9 @@ function renderEquipment() {
     empty.textContent = '<empty>';
     select.appendChild(empty);
 
-    const allowed = items
+    const allowed = allItems
       .filter(it => slot.categories.includes(it.category))
+      .filter(it => isEquippableItem(it))                // <- Tools/non-eq never show here
       .filter(it => !onlyOwned || ownedSet.has(it.id))
       .slice()
       .sort((a,b) => (a.name||'').localeCompare(b.name||''));
@@ -585,7 +648,7 @@ function renderEquipment() {
     details.style.marginTop = '0.5rem';
 
     if (currentId && !currentItem) {
-      details.textContent = `Unknown equipped item (${currentId}) — missing from admin data/items.json.`;
+      details.textContent = `Unknown equipped item (${currentId}) — missing from admin/custom items.`;
     } else if (currentItem) {
       const bonusStr = currentItem.bonuses ? `Bonuses: ${formatBonuses(currentItem.bonuses)}` : 'No bonuses.';
       const owned = getInventoryQty(currentId);
@@ -617,8 +680,11 @@ function setEquipped(slotKey, itemId) {
       alert('That item cannot be equipped in this slot.');
       return;
     }
+    if (it && !isEquippableItem(it)) {
+      alert('That item is not equippable (e.g., Tool).');
+      return;
+    }
 
-    // If equip-from-inventory-only enabled, ensure owned
     character.settings = character.settings || {};
     if (character.settings.equipInventoryOnly && getInventoryQty(itemId) <= 0) {
       alert('You can only equip items you have in inventory (qty > 0).');
@@ -652,14 +718,14 @@ function formatBonuses(bonusesObj) {
 }
 
 /* --------------------
-   Spells/Abilities (unchanged from prior)
+   Spells / Abilities (merged lists)
 -------------------- */
 function renderSpellPicker() {
   const select = document.getElementById('spellPick');
   select.innerHTML = '';
 
-  const unknowns = getUnknownIds(character.spellsKnown, spells);
-  const available = spells
+  const allSpells = getAllSpells();
+  const available = allSpells
     .filter(s => !(character.spellsKnown || []).includes(s.id))
     .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
@@ -675,21 +741,6 @@ function renderSpellPicker() {
     select.appendChild(opt);
   });
 
-  if (unknowns.length) {
-    const sep = document.createElement('option');
-    sep.value = '';
-    sep.textContent = '— unknown spells in save —';
-    sep.disabled = true;
-    select.appendChild(sep);
-    unknowns.forEach(id => {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = `Unknown (${id})`;
-      opt.disabled = true;
-      select.appendChild(opt);
-    });
-  }
-
   select.value = '';
 }
 
@@ -697,8 +748,8 @@ function renderAbilityPicker() {
   const select = document.getElementById('abilityPick');
   select.innerHTML = '';
 
-  const unknowns = getUnknownIds(character.abilitiesKnown, abilities);
-  const available = abilities
+  const allAbilities = getAllAbilities();
+  const available = allAbilities
     .filter(a => !(character.abilitiesKnown || []).includes(a.id))
     .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
@@ -714,21 +765,6 @@ function renderAbilityPicker() {
     select.appendChild(opt);
   });
 
-  if (unknowns.length) {
-    const sep = document.createElement('option');
-    sep.value = '';
-    sep.textContent = '— unknown abilities in save —';
-    sep.disabled = true;
-    select.appendChild(sep);
-    unknowns.forEach(id => {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = `Unknown (${id})`;
-      opt.disabled = true;
-      select.appendChild(opt);
-    });
-  }
-
   select.value = '';
 }
 
@@ -736,6 +772,7 @@ function renderSpellsKnown() {
   const container = document.getElementById('spellsKnown');
   container.innerHTML = '';
 
+  const allSpells = getAllSpells();
   const known = (character.spellsKnown || []).slice();
   if (!known.length) {
     container.innerHTML = `<div class="muted">No spells learned.</div>`;
@@ -743,10 +780,10 @@ function renderSpellsKnown() {
   }
 
   known.forEach(id => {
-    const sp = spells.find(s => s.id === id);
+    const sp = allSpells.find(s => s.id === id);
     container.appendChild(makeKnownCard({
       title: sp ? sp.name : `Unknown Spell (${id})`,
-      desc: sp ? (sp.description || '') : 'This ID is in the save file but not in admin data/spells.json.',
+      desc: sp ? (sp.description || '') : 'This ID is in the save file but not in admin/custom spells.',
       onForget: () => { forgetSpell(id); renderAll(); }
     }));
   });
@@ -756,6 +793,7 @@ function renderAbilitiesKnown() {
   const container = document.getElementById('abilitiesKnown');
   container.innerHTML = '';
 
+  const allAbilities = getAllAbilities();
   const known = (character.abilitiesKnown || []).slice();
   if (!known.length) {
     container.innerHTML = `<div class="muted">No abilities learned.</div>`;
@@ -763,10 +801,10 @@ function renderAbilitiesKnown() {
   }
 
   known.forEach(id => {
-    const ab = abilities.find(a => a.id === id);
+    const ab = allAbilities.find(a => a.id === id);
     container.appendChild(makeKnownCard({
       title: ab ? ab.name : `Unknown Ability (${id})`,
-      desc: ab ? (ab.description || '') : 'This ID is in the save file but not in admin data/abilities.json.',
+      desc: ab ? (ab.description || '') : 'This ID is in the save file but not in admin/custom abilities.',
       onForget: () => { forgetAbility(id); renderAll(); }
     }));
   });
@@ -819,9 +857,169 @@ function forgetAbility(id) {
   character.abilitiesKnown = (character.abilitiesKnown || []).filter(x => x !== id);
 }
 
-function getUnknownIds(knownIds, list) {
-  const set = new Set(list.map(x => x.id));
-  return (knownIds || []).filter(id => !set.has(id));
+/* --------------------
+   Custom Content UI
+-------------------- */
+function renderCustomSelectors() {
+  // Items
+  const itemSel = document.getElementById('customItemSelect');
+  itemSel.innerHTML = '';
+  const items = (character.customItems || []).slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  itemSel.appendChild(makeOpt('', '-- select custom item --'));
+  for (const it of items) itemSel.appendChild(makeOpt(it.id, it.name));
+  itemSel.value = editingCustomItemId || '';
+
+  // Spells
+  const spSel = document.getElementById('customSpellSelect');
+  spSel.innerHTML = '';
+  const spells = (character.customSpells || []).slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  spSel.appendChild(makeOpt('', '-- select custom spell --'));
+  for (const s of spells) spSel.appendChild(makeOpt(s.id, s.name));
+  spSel.value = editingCustomSpellId || '';
+
+  // Abilities
+  const abSel = document.getElementById('customAbilitySelect');
+  abSel.innerHTML = '';
+  const abs = (character.customAbilities || []).slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  abSel.appendChild(makeOpt('', '-- select custom ability --'));
+  for (const a of abs) abSel.appendChild(makeOpt(a.id, a.name));
+  abSel.value = editingCustomAbilityId || '';
+}
+
+function makeOpt(val, text) {
+  const opt = document.createElement('option');
+  opt.value = val;
+  opt.textContent = text;
+  return opt;
+}
+
+function buildCustomBonusGrid() {
+  const grid = document.getElementById('customItemBonusGrid');
+  grid.innerHTML = '';
+  for (const stat of CORE_STATS) {
+    const lab = document.createElement('label');
+    lab.innerHTML = `${stat}<input type="number" id="bonus_${stat}" step="1" value="0" />`;
+    grid.appendChild(lab);
+  }
+}
+
+function loadCustomItemIntoForm(id) {
+  const list = character.customItems || [];
+  const found = id ? list.find(x => x.id === id) : null;
+  editingCustomItemId = found ? found.id : null;
+
+  document.getElementById('customItemName').value = found?.name || '';
+  document.getElementById('customItemCategory').value = found?.category || 'Other';
+  document.getElementById('customItemTier').value = found?.tier || '';
+  document.getElementById('customItemDesc').value = found?.description || '';
+  document.getElementById('customItemEquippable').checked = found ? !!found.equippable : (String(document.getElementById('customItemCategory').value).toLowerCase() !== 'tool');
+
+  // bonuses
+  for (const stat of CORE_STATS) {
+    const v = Number(found?.bonuses?.[stat] || 0);
+    const el = document.getElementById(`bonus_${stat}`);
+    if (el) el.value = String(Number.isFinite(v) ? v : 0);
+  }
+
+  renderCustomSelectors();
+}
+
+function saveCustomItemFromForm() {
+  const name = (document.getElementById('customItemName').value || '').trim();
+  if (!name) { alert('Custom item needs a name.'); return; }
+
+  const category = document.getElementById('customItemCategory').value || 'Other';
+  const tier = (document.getElementById('customItemTier').value || '').trim();
+  const description = (document.getElementById('customItemDesc').value || '').trim();
+  let equippable = !!document.getElementById('customItemEquippable').checked;
+
+  // Tools should default non-equippable; allow override if you want
+  if (String(category).toLowerCase() === 'tool' && equippable) {
+    // allow it, but it will then appear in equipment if categories match
+  }
+
+  const bonuses = {};
+  for (const stat of CORE_STATS) {
+    const n = Number(document.getElementById(`bonus_${stat}`).value || 0);
+    if (Number.isFinite(n) && n !== 0) bonuses[stat] = n;
+  }
+
+  const obj = {
+    id: editingCustomItemId || makeCustomId('citem'),
+    name,
+    category,
+    description,
+    equippable,
+    ...(tier ? { tier } : {}),
+    ...(Object.keys(bonuses).length ? { bonuses } : {})
+  };
+
+  character.customItems = Array.isArray(character.customItems) ? character.customItems : [];
+  const idx = character.customItems.findIndex(x => x.id === obj.id);
+  if (idx === -1) character.customItems.push(obj);
+  else character.customItems[idx] = obj;
+
+  editingCustomItemId = obj.id;
+  renderCustomSelectors();
+}
+
+function loadCustomSpellIntoForm(id) {
+  const list = character.customSpells || [];
+  const found = id ? list.find(x => x.id === id) : null;
+  editingCustomSpellId = found ? found.id : null;
+
+  document.getElementById('customSpellName').value = found?.name || '';
+  document.getElementById('customSpellDesc').value = found?.description || '';
+
+  renderCustomSelectors();
+}
+
+function saveCustomSpellFromForm() {
+  const name = (document.getElementById('customSpellName').value || '').trim();
+  if (!name) { alert('Custom spell needs a name.'); return; }
+  const description = (document.getElementById('customSpellDesc').value || '').trim();
+
+  const obj = { id: editingCustomSpellId || makeCustomId('cspell'), name, description };
+
+  character.customSpells = Array.isArray(character.customSpells) ? character.customSpells : [];
+  const idx = character.customSpells.findIndex(x => x.id === obj.id);
+  if (idx === -1) character.customSpells.push(obj);
+  else character.customSpells[idx] = obj;
+
+  editingCustomSpellId = obj.id;
+  renderCustomSelectors();
+}
+
+function loadCustomAbilityIntoForm(id) {
+  const list = character.customAbilities || [];
+  const found = id ? list.find(x => x.id === id) : null;
+  editingCustomAbilityId = found ? found.id : null;
+
+  document.getElementById('customAbilityName').value = found?.name || '';
+  document.getElementById('customAbilityDesc').value = found?.description || '';
+
+  renderCustomSelectors();
+}
+
+function saveCustomAbilityFromForm() {
+  const name = (document.getElementById('customAbilityName').value || '').trim();
+  if (!name) { alert('Custom ability needs a name.'); return; }
+  const description = (document.getElementById('customAbilityDesc').value || '').trim();
+
+  const obj = { id: editingCustomAbilityId || makeCustomId('cabil'), name, description };
+
+  character.customAbilities = Array.isArray(character.customAbilities) ? character.customAbilities : [];
+  const idx = character.customAbilities.findIndex(x => x.id === obj.id);
+  if (idx === -1) character.customAbilities.push(obj);
+  else character.customAbilities[idx] = obj;
+
+  editingCustomAbilityId = obj.id;
+  renderCustomSelectors();
+}
+
+function makeCustomId(prefix) {
+  // short, deterministic-enough for local use; stored in save file
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
 /* --------------------
@@ -874,7 +1072,6 @@ function importCharacter(e) {
       next.level = safeNumber(parsed.level, next.level);
       next.availablePoints = safeNumber(parsed.availablePoints, next.availablePoints);
 
-      // stats
       if (parsed.stats && typeof parsed.stats === 'object') {
         for (const k of CORE_STATS) {
           const v = Number(parsed.stats[k]);
@@ -882,7 +1079,6 @@ function importCharacter(e) {
         }
       }
 
-      // currency
       if (parsed.currency && typeof parsed.currency === 'object') {
         next.currency = {
           gold: safeInt(parsed.currency.gold, 0),
@@ -891,7 +1087,7 @@ function importCharacter(e) {
         };
       }
 
-      // inventory (supports old and new)
+      // inventory supports old/new
       next.inventory = normalizeInventory(parsed.inventory);
       next.inventoryNotes = typeof parsed.inventoryNotes === 'string' ? parsed.inventoryNotes : '';
 
@@ -908,13 +1104,25 @@ function importCharacter(e) {
         next.settings.equipInventoryOnly = !!parsed.settings.equipInventoryOnly;
       }
 
-      // spells/abilities
       next.spellsKnown = Array.isArray(parsed.spellsKnown) ? parsed.spellsKnown.filter(x => typeof x === 'string') : [];
       next.abilitiesKnown = Array.isArray(parsed.abilitiesKnown) ? parsed.abilitiesKnown.filter(x => typeof x === 'string') : [];
 
+      // custom content
+      next.customItems = Array.isArray(parsed.customItems) ? parsed.customItems.filter(x => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.name === 'string') : [];
+      next.customSpells = Array.isArray(parsed.customSpells) ? parsed.customSpells.filter(x => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.name === 'string') : [];
+      next.customAbilities = Array.isArray(parsed.customAbilities) ? parsed.customAbilities.filter(x => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.name === 'string') : [];
+
       character = next;
+      editingCustomItemId = null;
+      editingCustomSpellId = null;
+      editingCustomAbilityId = null;
+
+      buildCustomBonusGrid();
       enforceEquipInventoryOnly();
       renderAll();
+      loadCustomItemIntoForm(null);
+      loadCustomSpellIntoForm(null);
+      loadCustomAbilityIntoForm(null);
     } catch (err) {
       alert('Import failed: invalid JSON file.');
     } finally {
