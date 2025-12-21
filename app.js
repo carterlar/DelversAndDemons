@@ -7,12 +7,15 @@ let character = {
   level: 1,
   stats: Object.fromEntries(statsList.map(s => [s, 5])),
   inventory: [],
+  spells: [],
+  abilities: [],
   equipped: {
     weapon: "",
     armor: "",
     headwear: ""
   }
 };
+
 
 let catalog = {};
 const tierMultipliers = { S:1.0, A:0.73, B:0.5, C:0.33, E:0.15 };
@@ -82,8 +85,11 @@ function update() {
   renderStats();
   updateDerived();
   renderInventory();
+  renderList(character.spells, "spells");
+  renderList(character.abilities, "abilities");
   updateBonuses();
 }
+
 
 
 function saveCharacter() {
@@ -184,5 +190,49 @@ function updateBonuses() {
     update();
   });
 });
+
+function renderList(list, elementId) {
+  const ul = document.getElementById(elementId);
+  ul.innerHTML = "";
+
+  list.forEach(item => {
+    const li = document.createElement("li");
+
+    const stat = item.scaling_stat;
+    const tier = item.tier;
+    const bonus = Math.ceil(character.stats[stat] * tierMultipliers[tier]);
+
+    li.textContent = `${item.name} [${tier}] (${stat})`;
+    li.title = item.flavor || `+${bonus}`;
+
+    ul.appendChild(li);
+  });
+}
+
+
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+    btn.classList.add("active");
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+  });
+});
+
+character.spells.push({
+  name: "Fireball",
+  scaling_stat: "INT",
+  tier: "A",
+  flavor: "Deals massive fire damage."
+});
+
+character.abilities.push({
+  name: "Power Strike",
+  scaling_stat: "STR",
+  tier: "B",
+  flavor: "A heavy melee attack."
+});
+
 
 update();
