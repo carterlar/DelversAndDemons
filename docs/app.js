@@ -2,6 +2,20 @@ const CORE_STATS = ['STR','DEX','CON','INT','WIS','CHA','AGI','LCK','PER','WIL']
 const STARTING_POINTS = 50;
 const POINTS_PER_LEVEL = 8;
 
+function calculateDerived(c) {
+  const s = c.stats;
+  const lvl = c.level;
+
+  return {
+    HP: s.CON + (lvl * 2) + Math.floor(s.WIL / 3),
+    Mana: (s.INT * 3) + (lvl * 2),
+    Sanity: Math.floor(s.WIL / 5),
+    AC: (10 + (s.STR / 15)).toFixed(2),
+    Accuracy: s.PER * 2,
+    DOTRes: (s.CON / 15).toFixed(2)
+  };
+}
+
 let titles = [];
 let character = newCharacter();
 
