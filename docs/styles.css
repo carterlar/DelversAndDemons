@@ -66,3 +66,95 @@ textarea {
   font-size: 0.9rem;
   white-space: nowrap;
 }
+
+.small { font-size: 0.95rem; }
+
+textarea {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tabBtn {
+  background: #eee;
+  color: #222;
+  border: 1px solid var(--border);
+}
+
+.tabBtn.active {
+  background: var(--primary);
+  color: white;
+  border-color: transparent;
+}
+
+.tabPanel { margin-top: 0.5rem; }
+.hidden { display: none; }
+
+.listCard {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fbfbfb;
+  margin-top: 0.5rem;
+}
+
+.listCard .titleRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.listCard .desc {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #f0f2f5;
+  border: 1px solid var(--border);
+  color: #333;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.currencyRow { flex-wrap: wrap; }
+.inlineField { min-width: 160px; }
+.inlineField input { width: 100%; }
+
+.equipGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+@media (min-width: 700px) {
+  .equipGrid { grid-template-columns: 1fr 1fr; }
+}
+
+.equipSlot {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.equipSlot h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
