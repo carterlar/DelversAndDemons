@@ -60,6 +60,21 @@ function renderStats() {
   });
 }
 
+function populateStatSelects() {
+  document.querySelectorAll("#catalog-stat, #custom-stat").forEach(sel => {
+    sel.innerHTML = "";
+    statsList.forEach(stat => {
+      const opt = document.createElement("option");
+      opt.value = stat;
+      opt.textContent = stat;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+populateStatSelects();
+
+
 function updateDerived() {
   const s = character.stats;
   const lvl = character.level;
@@ -208,6 +223,73 @@ function renderList(list, elementId) {
     ul.appendChild(li);
   });
 }
+
+function updateCatalogList() {
+  const category = document.getElementById("catalog-category").value;
+  const search = document.getElementById("catalog-search").value.toLowerCase();
+  const select = document.getElementById("catalog-select");
+
+  select.innerHTML = "";
+
+  (catalog[category] || [])
+    .filter(i => i.name.toLowerCase().includes(search))
+    .forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.name;
+      opt.textContent = item.name;
+      select.appendChild(opt);
+    });
+}
+
+["catalog-category","catalog-search"].forEach(id => {
+  document.getElementById(id).addEventListener("input", updateCatalogList);
+});
+
+updateCatalogList();
+
+document.getElementById("add-from-catalog").onclick = () => {
+  const category = document.getElementById("catalog-category").value;
+  const name = document.getElementById("catalog-select").value;
+  const stat = document.getElementById("catalog-stat").value;
+  const tier = document.getElementById("catalog-tier").value;
+
+  if (!name) return;
+
+  const base = catalog[category].find(i => i.name === name);
+  if (!base) return;
+
+  const item = {
+    ...base,
+    scaling_stat: stat,
+    tier
+  };
+
+  const bonus = Math.ceil(character.stats[stat] * tierMultipliers[tier]);
+  item.flavor = item.flavor || `+${bonus}`;
+
+  character[category].push(item);
+  update();
+};
+
+document.getElementById("create-custom").onclick = () => {
+  const name = document.getElementById("custom-name").value.trim();
+  const type = document.getElementById("custom-type").value;
+  const stat = document.getElementById("custom-stat").value;
+  const tier = document.getElementById("custom-tier").value;
+  const flavor = document.getElementById("custom-flavor").value;
+
+  if (!name) return;
+
+  const item = {
+    name,
+    scaling_stat: stat,
+    tier,
+    flavor
+  };
+
+  character[type].push(item);
+  update();
+};
 
 
 document.querySelectorAll(".tab").forEach(btn => {
