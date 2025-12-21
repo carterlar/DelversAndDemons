@@ -61,3 +61,33 @@ button:hover {
 .buttons button {
   margin-right: 8px;
 }
+
+.tabs {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.tab {
+  background: #3a3a3a;
+  color: #ff4444;
+  border: 1px solid #555;
+  border-bottom: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #2e2e2e;
+  font-weight: bold;
+}
+
+.tab-content {
+  display: none;
+  border: 1px solid #555;
+  padding: 10px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
