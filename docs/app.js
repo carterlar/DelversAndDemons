@@ -70,8 +70,10 @@ function bindUI() {
 function renderAll() {
   renderTitles();
   renderStats();
+  renderDerived();
   renderMeta();
 }
+
 
 function renderTitles() {
   const select = document.getElementById('titleSelect');
@@ -105,6 +107,21 @@ function renderStats() {
     container.appendChild(row);
   });
 }
+
+function renderDerived() {
+  const d = calculateDerived(character);
+  const container = document.getElementById('derivedContainer');
+
+  container.innerHTML = `
+    <div class="derived">HP: <strong>${d.HP}</strong></div>
+    <div class="derived">Mana: <strong>${d.Mana}</strong></div>
+    <div class="derived">Sanity: <strong>${d.Sanity}</strong></div>
+    <div class="derived">AC: <strong>${d.AC}</strong></div>
+    <div class="derived">Accuracy: <strong>${d.Accuracy}</strong></div>
+    <div class="derived">DOT Resistance: <strong>${d.DOTRes}</strong></div>
+  `;
+}
+
 
 function renderMeta() {
   document.getElementById('levelDisplay').textContent = character.level;
