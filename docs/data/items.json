@@ -37,5 +37,12 @@
     "category": "Consumable",
     "tier": "C",
     "description": "Restores a small amount of health when used."
+  },
+  {
+    "id": "tool_rope",
+    "name": "Rope (50ft)",
+    "category": "Tool",
+    "equippable": false,
+    "description": "Sturdy hemp rope."
   }
 ]
