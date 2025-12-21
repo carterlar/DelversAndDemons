@@ -1,0 +1,11 @@
+{
+  "weapons": [
+    { "name": "Iron Sword", "scaling_stat": "STR", "tier": "B" }
+  ],
+  "armor": [
+    { "name": "Leather Armor", "scaling_stat": "DEX", "tier": "C" }
+  ],
+  "headwear": [
+    { "name": "Wizard Hat", "scaling_stat": "INT", "tier": "B" }
+  ]
+}
