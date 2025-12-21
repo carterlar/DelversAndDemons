@@ -1,1 +1,5 @@
-
+[
+  { "id": "none", "label": "— No Title —" },
+  { "id": "novice", "label": "Novice Adventurer" },
+  { "id": "veteran", "label": "Veteran Mercenary" }
+]
