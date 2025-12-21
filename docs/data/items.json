@@ -1,0 +1,30 @@
+[
+  {
+    "id": "item_iron_sword",
+    "name": "Iron Sword",
+    "category": "Weapon",
+    "tier": "B",
+    "description": "A reliable blade with a simple edge."
+  },
+  {
+    "id": "item_leather_armor",
+    "name": "Leather Armor",
+    "category": "Armor",
+    "tier": "C",
+    "description": "Light protection that doesn’t restrict movement much."
+  },
+  {
+    "id": "item_health_potion",
+    "name": "Health Potion",
+    "category": "Consumable",
+    "tier": "C",
+    "description": "Restores a small amount of health when used."
+  },
+  {
+    "id": "item_lucky_charm",
+    "name": "Lucky Charm",
+    "category": "Trinket",
+    "tier": "A",
+    "description": "A small charm said to bend fortune slightly in your favor."
+  }
+]
