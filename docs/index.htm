@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Homebrew Character Tracker</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -27,15 +28,45 @@
   <section class="card">
     <h2>Level</h2>
     <div class="row">
-      <span id="levelDisplay">1</span>
+      <span class="badge">Level <strong id="levelDisplay">1</strong></span>
       <button id="levelUpBtn">Level Up</button>
     </div>
-    <div>Available Points: <strong id="pointsDisplay">50</strong></div>
+    <div class="muted">Available Points: <strong id="pointsDisplay">50</strong></div>
   </section>
 
   <section class="card">
-    <h2>Stats</h2>
-    <div id="statsContainer"></div>
+    <div class="tabs">
+      <button class="tabBtn" data-tab="stats">Stats</button>
+      <button class="tabBtn" data-tab="spells">Spells</button>
+      <button class="tabBtn" data-tab="abilities">Abilities</button>
+    </div>
+
+    <div id="tab_stats" class="tabPanel">
+      <h2>Stats</h2>
+      <div id="statsContainer"></div>
+    </div>
+
+    <div id="tab_spells" class="tabPanel hidden">
+      <h2>Spells Known</h2>
+
+      <div class="row">
+        <select id="spellPick"></select>
+        <button id="learnSpellBtn">Learn</button>
+      </div>
+
+      <div id="spellsKnown"></div>
+    </div>
+
+    <div id="tab_abilities" class="tabPanel hidden">
+      <h2>Abilities Known</h2>
+
+      <div class="row">
+        <select id="abilityPick"></select>
+        <button id="learnAbilityBtn">Learn</button>
+      </div>
+
+      <div id="abilitiesKnown"></div>
+    </div>
   </section>
 
   <section class="card">
@@ -43,17 +74,18 @@
     <div id="derivedContainer"></div>
   </section>
 
-
   <section class="card actions">
     <button id="saveBtn">Save Character</button>
+
     <label class="import">
       Import Save
-      <input type="file" id="importInput" hidden />
+      <input type="file" id="importInput" accept=".json,application/json" hidden />
     </label>
+
+    <button id="newBtn" class="secondary">New Character</button>
   </section>
 </main>
 
 <script src="app.js"></script>
 </body>
 </html>
-
