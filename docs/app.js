@@ -5,6 +5,7 @@ const POINTS_PER_LEVEL = 8;
 let titles = [];
 let spells = [];
 let abilities = [];
+let items = [];
 
 let character = newCharacter();
 let currentTab = 'stats';
@@ -20,8 +21,10 @@ function newCharacter() {
     level: 1,
     availablePoints: STARTING_POINTS,
     stats: Object.fromEntries(CORE_STATS.map(s => [s, 10])),
-    spellsKnown: [],      // store IDs only
-    abilitiesKnown: []    // store IDs only
+    inventory: [],              // store item IDs only
+    inventoryNotes: '',         // freeform notes
+    spellsKnown: [],            // store IDs only
+    abilitiesKnown: []          // store IDs only
   };
 }
 
@@ -59,14 +62,16 @@ async function init() {
 }
 
 async function loadAdminData() {
-  const [t, sp, ab] = await Promise.all([
+  const [t, sp, ab, it] = await Promise.all([
     fetchJson('data/titles.json'),
     fetchJson('data/spells.json'),
-    fetchJson('data/abilities.json')
+    fetchJson('data/abilities.json'),
+    fetchJson('data/items.json')
   ]);
   titles = t;
   spells = sp;
   abilities = ab;
+  items = it;
 }
 
 async function fetchJson(path) {
@@ -106,13 +111,25 @@ function bindUI() {
     btn.addEventListener('click', () => setTab(btn.dataset.tab));
   });
 
-  // Learn buttons
+  // Inventory
+  document.getElementById('addItemBtn').addEventListener('click', () => {
+    const id = document.getElementById('itemPick').value;
+    addItem(id);
+    renderAll();
+  });
+
+  document.getElementById('inventoryNotes').addEventListener('input', e => {
+    character.inventoryNotes = e.target.value;
+  });
+
+  // Spells
   document.getElementById('learnSpellBtn').addEventListener('click', () => {
     const id = document.getElementById('spellPick').value;
     learnSpell(id);
     renderAll();
   });
 
+  // Abilities
   document.getElementById('learnAbilityBtn').addEventListener('click', () => {
     const id = document.getElementById('abilityPick').value;
     learnAbility(id);
@@ -130,7 +147,7 @@ function setTab(tab) {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
 
-  ['stats','spells','abilities'].forEach(t => {
+  ['stats','inventory','spells','abilities'].forEach(t => {
     document.getElementById(`tab_${t}`).classList.toggle('hidden', t !== tab);
   });
 }
@@ -141,8 +158,13 @@ function setTab(tab) {
 function renderAll() {
   renderTitles();
   renderMeta();
+
   renderStats();
   renderDerived();
+
+  renderItemPicker();
+  renderInventory();
+  renderInventoryNotes();
 
   renderSpellPicker();
   renderAbilityPicker();
@@ -227,6 +249,96 @@ function renderDerived() {
 }
 
 /* --------------------
+   Inventory
+-------------------- */
+function renderItemPicker() {
+  const select = document.getElementById('itemPick');
+  select.innerHTML = '';
+
+  const available = items
+    .slice()
+    .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = available.length ? '-- select item --' : '-- no items available --';
+  select.appendChild(placeholder);
+
+  available.forEach(it => {
+    const opt = document.createElement('option');
+    opt.value = it.id;
+    const tier = it.tier ? ` (${it.tier})` : '';
+    const cat = it.category ? ` • ${it.category}` : '';
+    opt.textContent = `${it.name}${tier}${cat}`;
+    select.appendChild(opt);
+  });
+
+  select.value = '';
+}
+
+function renderInventoryNotes() {
+  const el = document.getElementById('inventoryNotes');
+  if (!el) return;
+  el.value = character.inventoryNotes || '';
+}
+
+function renderInventory() {
+  const container = document.getElementById('inventoryList');
+  container.innerHTML = '';
+
+  const inv = Array.isArray(character.inventory) ? character.inventory : [];
+  if (!inv.length) {
+    container.innerHTML = `<div class="muted">Inventory is empty.</div>`;
+    return;
+  }
+
+  inv.forEach((id, idx) => {
+    const it = items.find(x => x.id === id);
+    const title = it ? it.name : `Unknown Item (${id})`;
+    const desc = it ? (it.description || '') : 'This ID is in the save file but not in admin data/items.json.';
+    const metaBits = [];
+
+    if (it?.tier) metaBits.push(`Tier ${it.tier}`);
+    if (it?.category) metaBits.push(it.category);
+
+    const meta = metaBits.length
+      ? `<span class="pill">${escapeHtml(metaBits.join(' • '))}</span>`
+      : '';
+
+    const card = document.createElement('div');
+    card.className = 'listCard';
+    card.innerHTML = `
+      <div class="titleRow">
+        <div>
+          <strong>${escapeHtml(title)}</strong>
+          ${meta ? `<div style="margin-top:6px;">${meta}</div>` : ''}
+        </div>
+        <button class="secondary" data-idx="${idx}">Remove</button>
+      </div>
+      ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ''}
+    `;
+
+    card.querySelector('button').onclick = () => {
+      removeItemAtIndex(idx);
+      renderAll();
+    };
+
+    container.appendChild(card);
+  });
+}
+
+function addItem(id) {
+  if (!id) return;
+  if (!Array.isArray(character.inventory)) character.inventory = [];
+  character.inventory.push(id);
+}
+
+function removeItemAtIndex(idx) {
+  if (!Array.isArray(character.inventory)) character.inventory = [];
+  character.inventory.splice(idx, 1);
+}
+
+/* --------------------
    Spells + Abilities
 -------------------- */
 function renderSpellPicker() {
@@ -237,7 +349,7 @@ function renderSpellPicker() {
 
   const available = spells
     .filter(s => !character.spellsKnown.includes(s.id))
-    .sort((a,b) => a.name.localeCompare(b.name));
+    .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
   const placeholder = document.createElement('option');
   placeholder.value = '';
@@ -251,7 +363,6 @@ function renderSpellPicker() {
     select.appendChild(opt);
   });
 
-  // show unknown known IDs (from old saves) as informational only
   if (unknowns.length) {
     const sep = document.createElement('option');
     sep.value = '';
@@ -278,7 +389,7 @@ function renderAbilityPicker() {
 
   const available = abilities
     .filter(a => !character.abilitiesKnown.includes(a.id))
-    .sort((a,b) => a.name.localeCompare(b.name));
+    .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
   const placeholder = document.createElement('option');
   placeholder.value = '';
@@ -323,7 +434,6 @@ function renderSpellsKnown() {
   known.forEach(id => {
     const sp = spells.find(s => s.id === id);
     container.appendChild(makeKnownCard({
-      id,
       title: sp ? sp.name : `Unknown Spell (${id})`,
       desc: sp ? (sp.description || '') : 'This ID is in the save file but not in admin data/spells.json.',
       onForget: () => { forgetSpell(id); renderAll(); }
@@ -344,7 +454,6 @@ function renderAbilitiesKnown() {
   known.forEach(id => {
     const ab = abilities.find(a => a.id === id);
     container.appendChild(makeKnownCard({
-      id,
       title: ab ? ab.name : `Unknown Ability (${id})`,
       desc: ab ? (ab.description || '') : 'This ID is in the save file but not in admin data/abilities.json.',
       onForget: () => { forgetAbility(id); renderAll(); }
@@ -453,7 +562,6 @@ function importCharacter(e) {
     try {
       const parsed = JSON.parse(String(reader.result || ''));
 
-      // Minimal validation + normalization
       const next = newCharacter();
       next.name = typeof parsed.name === 'string' ? parsed.name : next.name;
       next.titleId = typeof parsed.titleId === 'string' ? parsed.titleId : next.titleId;
@@ -468,7 +576,11 @@ function importCharacter(e) {
         }
       }
 
-      // spells/abilities IDs only
+      // inventory
+      next.inventory = Array.isArray(parsed.inventory) ? parsed.inventory.filter(x => typeof x === 'string') : [];
+      next.inventoryNotes = typeof parsed.inventoryNotes === 'string' ? parsed.inventoryNotes : '';
+
+      // spells/abilities
       next.spellsKnown = Array.isArray(parsed.spellsKnown) ? parsed.spellsKnown.filter(x => typeof x === 'string') : [];
       next.abilitiesKnown = Array.isArray(parsed.abilitiesKnown) ? parsed.abilitiesKnown.filter(x => typeof x === 'string') : [];
 
