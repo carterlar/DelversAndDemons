@@ -37,6 +37,7 @@
   <section class="card">
     <div class="tabs">
       <button class="tabBtn" data-tab="stats">Stats</button>
+      <button class="tabBtn" data-tab="inventory">Inventory</button>
       <button class="tabBtn" data-tab="spells">Spells</button>
       <button class="tabBtn" data-tab="abilities">Abilities</button>
     </div>
@@ -44,6 +45,22 @@
     <div id="tab_stats" class="tabPanel">
       <h2>Stats</h2>
       <div id="statsContainer"></div>
+    </div>
+
+    <div id="tab_inventory" class="tabPanel hidden">
+      <h2>Inventory</h2>
+
+      <div class="row">
+        <select id="itemPick"></select>
+        <button id="addItemBtn">Add</button>
+      </div>
+
+      <label style="margin-top: 0.75rem;">
+        Inventory Notes
+        <textarea id="inventoryNotes" rows="4" placeholder="Freeform notes..."></textarea>
+      </label>
+
+      <div id="inventoryList"></div>
     </div>
 
     <div id="tab_spells" class="tabPanel hidden">
