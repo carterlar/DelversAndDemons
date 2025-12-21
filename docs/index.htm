@@ -38,13 +38,35 @@
     <div class="tabs">
       <button class="tabBtn" data-tab="stats">Stats</button>
       <button class="tabBtn" data-tab="inventory">Inventory</button>
+      <button class="tabBtn" data-tab="equipment">Equipment</button>
       <button class="tabBtn" data-tab="spells">Spells</button>
       <button class="tabBtn" data-tab="abilities">Abilities</button>
     </div>
 
     <div id="tab_stats" class="tabPanel">
       <h2>Stats</h2>
+
+      <div class="muted small">
+        Effective stats include bonuses from equipped items.
+      </div>
+
       <div id="statsContainer"></div>
+
+      <h3 style="margin-top: 1rem;">Currency</h3>
+      <div class="row currencyRow">
+        <label class="inlineField">
+          Gold
+          <input id="goldInput" type="number" min="0" step="1" />
+        </label>
+        <label class="inlineField">
+          Silver
+          <input id="silverInput" type="number" min="0" step="1" />
+        </label>
+        <label class="inlineField">
+          Copper
+          <input id="copperInput" type="number" min="0" step="1" />
+        </label>
+      </div>
     </div>
 
     <div id="tab_inventory" class="tabPanel hidden">
@@ -61,6 +83,20 @@
       </label>
 
       <div id="inventoryList"></div>
+    </div>
+
+    <div id="tab_equipment" class="tabPanel hidden">
+      <h2>Equipment</h2>
+      <div class="muted small">
+        Equipped items apply bonuses to stats and derived stats.
+      </div>
+
+      <div id="equipmentContainer"></div>
+
+      <div style="margin-top: 0.75rem;">
+        <h3>Active Bonuses</h3>
+        <div id="bonusSummary" class="muted"></div>
+      </div>
     </div>
 
     <div id="tab_spells" class="tabPanel hidden">
@@ -88,6 +124,7 @@
 
   <section class="card">
     <h2>Derived Stats</h2>
+    <div class="muted small">Derived stats are calculated from effective stats (base + equipment bonuses).</div>
     <div id="derivedContainer"></div>
   </section>
 
