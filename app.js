@@ -14,6 +14,18 @@ let character = {
   }
 };
 
+let catalog = {};
+const tierMultipliers = { S:1.0, A:0.73, B:0.5, C:0.33, E:0.15 };
+
+fetch("items.json")
+  .then(r => r.json())
+  .then(data => {
+    catalog = data;
+    seedInventory();
+    renderInventory();
+    renderEquipDropdowns();
+  });
+
 let allocator = new StatAllocator(character.stats, character.level);
 
 const statsDiv = document.getElementById("stats");
@@ -69,7 +81,10 @@ function update() {
   pointsDiv.textContent = `Points Remaining: ${allocator.remainingPoints}`;
   renderStats();
   updateDerived();
+  renderInventory();
+  updateBonuses();
 }
+
 
 function saveCharacter() {
   localStorage.setItem("character", JSON.stringify(character));
@@ -85,11 +100,82 @@ function loadCharacter() {
   update();
 }
 
+function seedInventory() {
+  character.inventory = [
+    ...catalog.weapons,
+    ...catalog.armor,
+    ...catalog.headwear
+  ];
+}
+
+function renderInventory() {
+  const ul = document.getElementById("inventory");
+  ul.innerHTML = "";
+
+  character.inventory.forEach(item => {
+    const li = document.createElement("li");
+
+    const stat = item.scaling_stat;
+    const tier = item.tier;
+    const bonus = Math.ceil(character.stats[stat] * tierMultipliers[tier]);
+
+    li.textContent = `${item.name} [${tier}] (${stat})`;
+    li.title = `+${bonus} ${item.category === "weapon" ? "Attack" : "AC"}`;
+
+    ul.appendChild(li);
+  });
+}
+
+
 function syncInputs() {
   ["name","race","class","level"].forEach(id => {
     document.getElementById(id).value = character[id];
   });
 }
+
+function renderEquipDropdowns() {
+  ["weapon","armor","headwear"].forEach(slot => {
+    const select = document.getElementById(`equip-${slot}`);
+    select.innerHTML = `<option value="">None</option>`;
+
+    character.inventory
+      .filter(i => i.name)
+      .forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.name;
+        opt.textContent = item.name;
+        select.appendChild(opt);
+      });
+
+    select.onchange = e => {
+      character.equipped[slot] = e.target.value;
+      updateBonuses();
+    };
+  });
+}
+
+function updateBonuses() {
+  const lines = [];
+
+  Object.entries(character.equipped).forEach(([slot, name]) => {
+    if (!name) return;
+
+    const item = character.inventory.find(i => i.name === name);
+    if (!item) return;
+
+    const stat = item.scaling_stat;
+    const tier = item.tier;
+    const mult = tierMultipliers[tier];
+    const bonus = Math.ceil(character.stats[stat] * mult);
+
+    if (slot === "weapon") lines.push(`+${bonus} Attack (${name})`);
+    else lines.push(`+${bonus} AC (${name})`);
+  });
+
+  document.getElementById("bonuses").textContent =
+    lines.length ? lines.join("\n") : "No bonuses";
+}
+
 
 ["name","race","class","level"].forEach(id => {
   document.getElementById(id).addEventListener("input", e => {
