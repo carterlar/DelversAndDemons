@@ -1,66 +1,47 @@
-
-body {
-  font-family: system-ui, sans-serif;
-  background: #f4f6f8;
-  margin: 0;
-  padding: 0;
-}
-
-header {
-  background: #2f80ed;
-  color: white;
-  padding: 1rem;
-}
-
-main {
-  max-width: 800px;
-  margin: auto;
-  padding: 1rem;
-}
-
-.card {
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-label {
+.tabs {
   display: flex;
-  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-#statsContainer .stat {
-  display: flex;
-  justify-content: space-between;
-  margin: 0.25rem 0;
-}
-
-button {
-  padding: 0.4rem 0.8rem;
-  cursor: pointer;
-}
-
-.actions {
-  display: flex;
-  justify-content: space-between;
-}
-
-.import {
+.tabBtn {
   background: #eee;
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  cursor: pointer;
+  color: #222;
+  border: 1px solid var(--border);
 }
 
-.derived {
-  margin: 0.25rem 0;
+.tabBtn.active {
+  background: var(--primary);
+  color: white;
+  border-color: transparent;
 }
 
+.tabPanel {
+  margin-top: 0.5rem;
+}
+
+.hidden {
+  display: none;
+}
+
+.listCard {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fbfbfb;
+  margin-top: 0.5rem;
+}
+
+.listCard .titleRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.listCard .desc {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
