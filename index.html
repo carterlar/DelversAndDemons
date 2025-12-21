@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>D&D Character Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <h1>D&D Character Tracker</h1>
+
+  <div class="panel">
+    <h2>Character Info</h2>
+
+    <label>Name <input id="name"></label>
+    <label>Race <input id="race"></label>
+    <label>Class <input id="class"></label>
+    <label>Level <input id="level" type="number" min="1"></label>
+
+    <div class="derived">
+      <div>HP: <span id="hp"></span></div>
+      <div>Mana: <span id="mana"></span></div>
+      <div>AC: <span id="ac"></span></div>
+      <div>Accuracy: <span id="accuracy"></span></div>
+      <div>Sanity: <span id="sanity"></span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Ability Scores</h2>
+    <div id="points"></div>
+    <div id="stats"></div>
+  </div>
+
+  <div class="panel buttons">
+    <button onclick="saveCharacter()">Save</button>
+    <button onclick="loadCharacter()">Load</button>
+  </div>
+
+  <script src="statAllocator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
