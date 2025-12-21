@@ -173,3 +173,43 @@ textarea {
   align-items: center;
   margin-top: 0.5rem;
 }
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 900px) {
+  .twoCol { grid-template-columns: 1fr 1fr; }
+}
+
+.subcard {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.9rem;
+  background: #fff;
+}
+
+.subcard h3 {
+  margin-top: 0;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+
+.bonusGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.bonusGrid label {
+  margin: 0;
+}
+
+.bonusGrid input {
+  width: 100%;
+}
