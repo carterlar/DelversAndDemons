@@ -2,7 +2,6 @@ const CORE_STATS = ['STR','DEX','CON','INT','WIS','CHA','AGI','LCK','PER','WIL']
 const STARTING_POINTS = 50;
 const POINTS_PER_LEVEL = 8;
 
-// Equipment slots + what categories are allowed in each slot
 const EQUIPMENT_SLOTS = [
   { key: 'Weapon', label: 'Weapon', categories: ['Weapon'] },
   { key: 'Offhand', label: 'Offhand', categories: ['Weapon','Trinket','Accessory'] },
@@ -28,43 +27,108 @@ let currentTab = 'stats';
 -------------------- */
 function newCharacter() {
   return {
-    meta: { app: 'Homebrew Character Tracker', version: '1.1' },
+    meta: { app: 'Homebrew Character Tracker', version: '1.2' },
     name: 'New Adventurer',
     titleId: 'none',
     level: 1,
     availablePoints: STARTING_POINTS,
     stats: Object.fromEntries(CORE_STATS.map(s => [s, 10])),
 
-    // Currency
     currency: { gold: 0, silver: 0, copper: 0 },
 
-    // Inventory
-    inventory: [],              // store item IDs only
+    // Inventory: array of { id, qty }
+    inventory: [],
     inventoryNotes: '',
 
-    // Equipment (slot -> itemId or null)
     equipped: Object.fromEntries(EQUIPMENT_SLOTS.map(s => [s.key, null])),
 
-    // Spells/Abilities (IDs only)
     spellsKnown: [],
-    abilitiesKnown: []
+    abilitiesKnown: [],
+
+    // Character-level settings (saved with the character file)
+    settings: {
+      equipInventoryOnly: false
+    }
   };
 }
 
 /* --------------------
-   Bonuses / Effective stats
+   Admin lookup
 -------------------- */
 function getItemById(id) {
   return items.find(x => x.id === id) || null;
 }
 
+/* --------------------
+   Inventory helpers (qty)
+-------------------- */
+function normalizeInventory(inv) {
+  // Accepts:
+  // - [{id, qty}]
+  // - ["id","id",...]
+  // - null/undefined
+  if (!inv) return [];
+  if (Array.isArray(inv) && inv.length && typeof inv[0] === 'string') {
+    // old format -> convert to qty
+    const map = new Map();
+    for (const id of inv) {
+      if (typeof id !== 'string') continue;
+      map.set(id, (map.get(id) || 0) + 1);
+    }
+    return Array.from(map.entries()).map(([id, qty]) => ({ id, qty }));
+  }
+
+  if (Array.isArray(inv)) {
+    const cleaned = [];
+    for (const row of inv) {
+      if (!row || typeof row !== 'object') continue;
+      const id = typeof row.id === 'string' ? row.id : '';
+      const qty = safeInt(row.qty, 0);
+      if (!id || qty <= 0) continue;
+      cleaned.push({ id, qty });
+    }
+    // merge duplicates
+    const map = new Map();
+    for (const r of cleaned) map.set(r.id, (map.get(r.id) || 0) + r.qty);
+    return Array.from(map.entries()).map(([id, qty]) => ({ id, qty }));
+  }
+
+  return [];
+}
+
+function getInventoryQty(id) {
+  const row = (character.inventory || []).find(x => x.id === id);
+  return row ? Number(row.qty || 0) : 0;
+}
+
+function addInventoryQty(id, delta) {
+  if (!id || !Number.isFinite(delta) || delta === 0) return;
+  character.inventory = normalizeInventory(character.inventory);
+
+  const idx = character.inventory.findIndex(x => x.id === id);
+  if (idx === -1) {
+    if (delta > 0) character.inventory.push({ id, qty: delta });
+  } else {
+    const next = (Number(character.inventory[idx].qty || 0) + delta);
+    if (next <= 0) character.inventory.splice(idx, 1);
+    else character.inventory[idx].qty = next;
+  }
+
+  // If equip-from-inventory is enabled, auto-unequip items that are no longer owned
+  enforceEquipInventoryOnly();
+}
+
+/* --------------------
+   Equipment bonuses / effective stats
+-------------------- */
 function aggregateEquipmentBonuses(c) {
   const bonusTotals = Object.fromEntries(CORE_STATS.map(s => [s, 0]));
-
   const equipped = c.equipped || {};
+
   for (const slot of EQUIPMENT_SLOTS) {
     const itemId = equipped[slot.key];
     if (!itemId) continue;
+
     const it = getItemById(itemId);
     if (!it || !it.bonuses || typeof it.bonuses !== 'object') continue;
 
@@ -89,7 +153,7 @@ function getEffectiveStats(c) {
 }
 
 /* --------------------
-   Derived Stats (from effective stats)
+   Derived Stats
 -------------------- */
 function calculateDerived(c) {
   const { effective } = getEffectiveStats(c);
@@ -112,7 +176,7 @@ function calculateDerived(c) {
 }
 
 /* --------------------
-   Init
+   Init / Load admin data
 -------------------- */
 async function init() {
   await loadAdminData();
@@ -166,7 +230,6 @@ function bindUI() {
     renderAll();
   });
 
-  // Tabs
   document.querySelectorAll('.tabBtn').forEach(btn => {
     btn.addEventListener('click', () => setTab(btn.dataset.tab));
   });
@@ -174,12 +237,21 @@ function bindUI() {
   // Inventory
   document.getElementById('addItemBtn').addEventListener('click', () => {
     const id = document.getElementById('itemPick').value;
-    addItem(id);
+    if (!id) return;
+    addInventoryQty(id, +1);
     renderAll();
   });
 
   document.getElementById('inventoryNotes').addEventListener('input', e => {
     character.inventoryNotes = e.target.value;
+  });
+
+  // Equip-from-inventory toggle
+  document.getElementById('equipInventoryOnlyToggle').addEventListener('change', e => {
+    character.settings = character.settings || {};
+    character.settings.equipInventoryOnly = !!e.target.checked;
+    enforceEquipInventoryOnly();
+    renderAll();
   });
 
   // Currency
@@ -225,7 +297,7 @@ function setTab(tab) {
 }
 
 /* --------------------
-   Rendering
+   Render
 -------------------- */
 function renderAll() {
   renderTitles();
@@ -236,9 +308,10 @@ function renderAll() {
   renderDerived();
 
   renderItemPicker();
-  renderInventory();
   renderInventoryNotes();
+  renderInventory();
 
+  renderEquipmentToggle();
   renderEquipment();
   renderBonusSummary();
 
@@ -338,7 +411,7 @@ function renderDerived() {
 }
 
 /* --------------------
-   Inventory
+   Inventory UI (qty)
 -------------------- */
 function renderItemPicker() {
   const select = document.getElementById('itemPick');
@@ -366,34 +439,38 @@ function renderItemPicker() {
 }
 
 function renderInventoryNotes() {
-  const el = document.getElementById('inventoryNotes');
-  if (!el) return;
-  el.value = character.inventoryNotes || '';
+  document.getElementById('inventoryNotes').value = character.inventoryNotes || '';
 }
 
 function renderInventory() {
   const container = document.getElementById('inventoryList');
   container.innerHTML = '';
 
-  const inv = Array.isArray(character.inventory) ? character.inventory : [];
+  character.inventory = normalizeInventory(character.inventory);
+  const inv = character.inventory;
+
   if (!inv.length) {
     container.innerHTML = `<div class="muted">Inventory is empty.</div>`;
     return;
   }
 
-  inv.forEach((id, idx) => {
-    const it = getItemById(id);
-    const title = it ? it.name : `Unknown Item (${id})`;
-    const desc = it ? (it.description || '') : 'This ID is in the save file but not in admin data/items.json.';
-    const metaBits = [];
+  // Sort inventory by item name (stable-ish)
+  const sorted = inv.slice().sort((a,b) => {
+    const ia = getItemById(a.id);
+    const ib = getItemById(b.id);
+    return (ia?.name || a.id).localeCompare(ib?.name || b.id);
+  });
 
+  for (const row of sorted) {
+    const it = getItemById(row.id);
+    const title = it ? it.name : `Unknown Item (${row.id})`;
+    const desc = it ? (it.description || '') : 'This ID is in the save file but not in admin data/items.json.';
+
+    const metaBits = [];
     if (it?.tier) metaBits.push(`Tier ${it.tier}`);
     if (it?.category) metaBits.push(it.category);
 
-    const meta = metaBits.length
-      ? `<span class="pill">${escapeHtml(metaBits.join(' • '))}</span>`
-      : '';
-
+    const meta = metaBits.length ? `<span class="pill">${escapeHtml(metaBits.join(' • '))}</span>` : '';
     const bonusStr = it?.bonuses ? formatBonuses(it.bonuses) : '';
 
     const card = document.createElement('div');
@@ -402,41 +479,66 @@ function renderInventory() {
       <div class="titleRow">
         <div>
           <strong>${escapeHtml(title)}</strong>
+          <div class="muted small" style="margin-top:6px;">
+            Qty: <strong>${row.qty}</strong>
+          </div>
           ${meta ? `<div style="margin-top:6px;">${meta}</div>` : ''}
           ${bonusStr ? `<div class="muted small" style="margin-top:6px;">Bonuses: ${escapeHtml(bonusStr)}</div>` : ''}
         </div>
-        <button class="secondary">Remove</button>
+        <div class="qtyRow">
+          <button class="secondary" data-act="minus">-1</button>
+          <button class="secondary" data-act="plus">+1</button>
+          <button class="secondary" data-act="remove">Remove</button>
+        </div>
       </div>
       ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ''}
     `;
 
-    card.querySelector('button').onclick = () => {
-      removeItemAtIndex(idx);
-      renderAll();
-    };
+    const btnMinus = card.querySelector('button[data-act="minus"]');
+    const btnPlus = card.querySelector('button[data-act="plus"]');
+    const btnRemove = card.querySelector('button[data-act="remove"]');
+
+    btnMinus.onclick = () => { addInventoryQty(row.id, -1); renderAll(); };
+    btnPlus.onclick = () => { addInventoryQty(row.id, +1); renderAll(); };
+    btnRemove.onclick = () => { addInventoryQty(row.id, -999999); renderAll(); };
 
     container.appendChild(card);
-  });
-}
-
-function addItem(id) {
-  if (!id) return;
-  if (!Array.isArray(character.inventory)) character.inventory = [];
-  character.inventory.push(id);
-}
-
-function removeItemAtIndex(idx) {
-  if (!Array.isArray(character.inventory)) character.inventory = [];
-  character.inventory.splice(idx, 1);
+  }
 }
 
 /* --------------------
-   Equipment
+   Equipment inventory-only mode
 -------------------- */
+function renderEquipmentToggle() {
+  const toggle = document.getElementById('equipInventoryOnlyToggle');
+  character.settings = character.settings || {};
+  toggle.checked = !!character.settings.equipInventoryOnly;
+}
+
+function enforceEquipInventoryOnly() {
+  character.settings = character.settings || {};
+  if (!character.settings.equipInventoryOnly) return;
+
+  // If an equipped item isn't owned, unequip it
+  for (const slot of EQUIPMENT_SLOTS) {
+    const id = character.equipped?.[slot.key];
+    if (!id) continue;
+    if (getInventoryQty(id) <= 0) {
+      character.equipped[slot.key] = null;
+    }
+  }
+}
+
 function renderEquipment() {
   const container = document.getElementById('equipmentContainer');
   container.innerHTML = '';
 
+  character.inventory = normalizeInventory(character.inventory);
+  enforceEquipInventoryOnly();
+
+  const onlyOwned = !!(character.settings && character.settings.equipInventoryOnly);
+
+  const ownedSet = new Set(character.inventory.map(x => x.id));
   const grid = document.createElement('div');
   grid.className = 'equipGrid';
 
@@ -449,15 +551,14 @@ function renderEquipment() {
 
     const select = document.createElement('select');
 
-    // Empty option
     const empty = document.createElement('option');
     empty.value = '';
     empty.textContent = '<empty>';
     select.appendChild(empty);
 
-    // Allowed items
     const allowed = items
       .filter(it => slot.categories.includes(it.category))
+      .filter(it => !onlyOwned || ownedSet.has(it.id))
       .slice()
       .sort((a,b) => (a.name||'').localeCompare(b.name||''));
 
@@ -465,7 +566,8 @@ function renderEquipment() {
       const opt = document.createElement('option');
       opt.value = it.id;
       const tier = it.tier ? ` (${it.tier})` : '';
-      opt.textContent = `${it.name}${tier}`;
+      const qty = onlyOwned ? ` • Qty ${getInventoryQty(it.id)}` : '';
+      opt.textContent = `${it.name}${tier}${qty}`;
       select.appendChild(opt);
     }
 
@@ -477,18 +579,20 @@ function renderEquipment() {
       renderAll();
     });
 
-    // Details
     const currentItem = currentId ? getItemById(currentId) : null;
     const details = document.createElement('div');
     details.className = 'muted small';
     details.style.marginTop = '0.5rem';
+
     if (currentId && !currentItem) {
       details.textContent = `Unknown equipped item (${currentId}) — missing from admin data/items.json.`;
     } else if (currentItem) {
       const bonusStr = currentItem.bonuses ? `Bonuses: ${formatBonuses(currentItem.bonuses)}` : 'No bonuses.';
-      details.textContent = `${currentItem.category}${currentItem.tier ? ` • Tier ${currentItem.tier}` : ''} — ${bonusStr}`;
+      const owned = getInventoryQty(currentId);
+      const ownedNote = onlyOwned ? ` • Owned: ${owned}` : '';
+      details.textContent = `${currentItem.category}${currentItem.tier ? ` • Tier ${currentItem.tier}` : ''}${ownedNote} — ${bonusStr}`;
     } else {
-      details.textContent = `Allowed: ${slot.categories.join(', ')}`;
+      details.textContent = `Allowed: ${slot.categories.join(', ')}${onlyOwned ? ' • (filtered to inventory)' : ''}`;
     }
 
     box.appendChild(h);
@@ -505,12 +609,19 @@ function setEquipped(slotKey, itemId) {
     character.equipped = Object.fromEntries(EQUIPMENT_SLOTS.map(s => [s.key, null]));
   }
 
-  // Validate category if item exists
   if (itemId) {
     const it = getItemById(itemId);
     const slot = EQUIPMENT_SLOTS.find(s => s.key === slotKey);
+
     if (it && slot && !slot.categories.includes(it.category)) {
       alert('That item cannot be equipped in this slot.');
+      return;
+    }
+
+    // If equip-from-inventory-only enabled, ensure owned
+    character.settings = character.settings || {};
+    if (character.settings.equipInventoryOnly && getInventoryQty(itemId) <= 0) {
+      alert('You can only equip items you have in inventory (qty > 0).');
       return;
     }
   }
@@ -541,16 +652,15 @@ function formatBonuses(bonusesObj) {
 }
 
 /* --------------------
-   Spells + Abilities
+   Spells/Abilities (unchanged from prior)
 -------------------- */
 function renderSpellPicker() {
   const select = document.getElementById('spellPick');
   select.innerHTML = '';
 
   const unknowns = getUnknownIds(character.spellsKnown, spells);
-
   const available = spells
-    .filter(s => !character.spellsKnown.includes(s.id))
+    .filter(s => !(character.spellsKnown || []).includes(s.id))
     .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
   const placeholder = document.createElement('option');
@@ -588,9 +698,8 @@ function renderAbilityPicker() {
   select.innerHTML = '';
 
   const unknowns = getUnknownIds(character.abilitiesKnown, abilities);
-
   const available = abilities
-    .filter(a => !character.abilitiesKnown.includes(a.id))
+    .filter(a => !(character.abilitiesKnown || []).includes(a.id))
     .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
   const placeholder = document.createElement('option');
@@ -692,9 +801,8 @@ function makeKnownCard({ title, desc, onForget }) {
 
 function learnSpell(id) {
   if (!id) return;
-  if (!character.spellsKnown) character.spellsKnown = [];
-  if (character.spellsKnown.includes(id)) return;
-  character.spellsKnown.push(id);
+  character.spellsKnown = Array.isArray(character.spellsKnown) ? character.spellsKnown : [];
+  if (!character.spellsKnown.includes(id)) character.spellsKnown.push(id);
 }
 
 function forgetSpell(id) {
@@ -703,9 +811,8 @@ function forgetSpell(id) {
 
 function learnAbility(id) {
   if (!id) return;
-  if (!character.abilitiesKnown) character.abilitiesKnown = [];
-  if (character.abilitiesKnown.includes(id)) return;
-  character.abilitiesKnown.push(id);
+  character.abilitiesKnown = Array.isArray(character.abilitiesKnown) ? character.abilitiesKnown : [];
+  if (!character.abilitiesKnown.includes(id)) character.abilitiesKnown.push(id);
 }
 
 function forgetAbility(id) {
@@ -732,7 +839,7 @@ function levelUp() {
 }
 
 /* --------------------
-   Save / Load (file-based)
+   Save / Import
 -------------------- */
 function saveCharacter() {
   const safeName = (character.name || 'character')
@@ -768,7 +875,6 @@ function importCharacter(e) {
       next.availablePoints = safeNumber(parsed.availablePoints, next.availablePoints);
 
       // stats
-      next.stats = { ...next.stats };
       if (parsed.stats && typeof parsed.stats === 'object') {
         for (const k of CORE_STATS) {
           const v = Number(parsed.stats[k]);
@@ -785,8 +891,8 @@ function importCharacter(e) {
         };
       }
 
-      // inventory + notes
-      next.inventory = Array.isArray(parsed.inventory) ? parsed.inventory.filter(x => typeof x === 'string') : [];
+      // inventory (supports old and new)
+      next.inventory = normalizeInventory(parsed.inventory);
       next.inventoryNotes = typeof parsed.inventoryNotes === 'string' ? parsed.inventoryNotes : '';
 
       // equipped
@@ -797,11 +903,17 @@ function importCharacter(e) {
         }
       }
 
+      // settings
+      if (parsed.settings && typeof parsed.settings === 'object') {
+        next.settings.equipInventoryOnly = !!parsed.settings.equipInventoryOnly;
+      }
+
       // spells/abilities
       next.spellsKnown = Array.isArray(parsed.spellsKnown) ? parsed.spellsKnown.filter(x => typeof x === 'string') : [];
       next.abilitiesKnown = Array.isArray(parsed.abilitiesKnown) ? parsed.abilitiesKnown.filter(x => typeof x === 'string') : [];
 
       character = next;
+      enforceEquipInventoryOnly();
       renderAll();
     } catch (err) {
       alert('Import failed: invalid JSON file.');
