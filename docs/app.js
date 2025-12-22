@@ -234,6 +234,8 @@ function calculateDerived(c) {
 async function init() {
   await loadAdminData();
   bindUI();
+  buildCustomScaleStatGrid();
+  buildCustomBonusGrid();
   buildCustomBonusGrid();
   setTab('stats');
   renderAll();
@@ -740,14 +742,37 @@ function renderBonusSummary() {
   el.textContent = parts.length ? parts.join(' • ') : 'No active equipment bonuses.';
 }
 
-function formatBonuses(bonusesObj) {
-  const parts = [];
-  for (const stat of CORE_STATS) {
-    const v = Number(bonusesObj?.[stat] || 0);
-    if (Number.isFinite(v) && v !== 0) parts.push(`${stat} ${v >= 0 ? '+' : ''}${v}`);
+  function formatBonuses(bonusesObj) {
+    const parts = [];
+    for (const stat of CORE_STATS) {
+      const v = Number(bonusesObj?.[stat] || 0);
+      if (Number.isFinite(v) && v !== 0) parts.push(`${stat} ${v >= 0 ? '+' : ''}${v}`);
+    }
+    return parts.join(', ');
   }
-  return parts.join(', ');
-}
+
+
+  function buildCustomScaleStatGrid() {
+    const grid = document.getElementById('customItemScaleStatGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    for (const stat of CORE_STATS) {
+      const lab = document.createElement('label');
+      lab.innerHTML = `<input type="checkbox" id="scale_${stat}" /> ${stat}`;
+      grid.appendChild(lab);
+    }
+  }
+  
+  function buildCustomBonusGrid() {
+    const grid = document.getElementById('customItemBonusGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    for (const stat of CORE_STATS) {
+      const lab = document.createElement('label');
+      lab.innerHTML = `${stat}<input type="number" id="bonus_${stat}" step="1" value="0" />`;
+      grid.appendChild(lab);
+    }
+  }
 
 /* --------------------
    Spells / Abilities (merged lists)
