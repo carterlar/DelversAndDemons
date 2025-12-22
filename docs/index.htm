@@ -157,7 +157,29 @@
             </select>
           </label>
 
-          <label>Tier (optional) <input id="customItemTier" type="text" placeholder="A / B / C ..." /></label>
+          <label>Tier
+            <select id="customItemTier">
+              <option value="">(none)</option>
+              <option value="S">S</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="E">E</option>
+          </select>
+        </label>
+
+        <label>Base Damage (weapons)
+          <input id="customItemBaseDamage" type="number" step="1" value="0" />
+        </label>
+
+        <label>AC Bonus (armor/headwear)
+          <input id="customItemAcBonus" type="number" step="0.1" value="0" />
+        </label>
+
+        <div class="muted small">Weapon scales with (toggle stats)</div>
+        <div class="statToggleGrid" id="customItemScaleStatGrid"></div>
+
           <label>Description <textarea id="customItemDesc" rows="3"></textarea></label>
 
           <label class="checkboxRow">
