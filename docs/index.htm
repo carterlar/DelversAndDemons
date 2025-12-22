@@ -136,14 +136,15 @@
       <div class="twoCol" style="margin-top: 0.75rem;">
         <section class="subcard">
           <h3>Custom Items</h3>
+        
           <div class="row">
             <select id="customItemSelect"></select>
             <button id="customItemNewBtn" class="secondary">New</button>
             <button id="customItemDeleteBtn" class="secondary">Delete</button>
           </div>
-
+        
           <label>Name <input id="customItemName" type="text" /></label>
-
+        
           <label>Category
             <select id="customItemCategory">
               <option>Weapon</option>
@@ -156,7 +157,7 @@
               <option>Other</option>
             </select>
           </label>
-
+        
           <label>Tier
             <select id="customItemTier">
               <option value="">(none)</option>
@@ -166,32 +167,50 @@
               <option value="C">C</option>
               <option value="D">D</option>
               <option value="E">E</option>
-          </select>
-        </label>
-
-        <label>Base Damage (weapons)
-          <input id="customItemBaseDamage" type="number" step="1" value="0" />
-        </label>
-
-        <label>AC Bonus (armor/headwear)
-          <input id="customItemAcBonus" type="number" step="0.1" value="0" />
-        </label>
-
-        <div class="muted small">Weapon scales with (toggle stats)</div>
-        <div class="statToggleGrid" id="customItemScaleStatGrid"></div>
-
+            </select>
+          </label>
+        
           <label>Description <textarea id="customItemDesc" rows="3"></textarea></label>
-
+        
           <label class="checkboxRow">
             <input type="checkbox" id="customItemEquippable" />
             Equippable
           </label>
-
-          <div class="muted small">Bonuses (optional)</div>
-          <div class="bonusGrid" id="customItemBonusGrid"></div>
-
-          <button id="customItemSaveBtn">Save Item</button>
+        
+          <div class="muted small" style="margin-top: 0.75rem;">Defense (Armor/Headwear only)</div>
+          <label>AC Bonus
+            <input id="customItemAcBonus" type="number" step="0.1" value="0" />
+          </label>
+          <div class="muted small">
+            Tip: AC Bonus only affects AC when equipped in Armor or Headwear slots.
+          </div>
+        
+          <div id="weaponScalingSection" style="margin-top: 0.9rem;">
+            <div class="muted small">Weapon Scaling (Weapons only)</div>
+        
+            <label>Base Damage
+              <input id="customItemBaseDamage" type="number" step="1" value="0" />
+            </label>
+        
+            <div class="muted small">Scales With (toggle stats)</div>
+            <div class="statToggleGrid" id="customItemScaleStatGrid"></div>
+        
+            <div class="muted small">
+              Tier is used as scaling rank (S–E). If no stats are toggled, bonus damage will be +0 even if Tier is S.
+            </div>
+          </div>
+        
+          <div style="margin-top: 0.9rem;">
+            <div class="muted small">Direct Stat Bonuses (optional)</div>
+            <div class="bonusGrid" id="customItemBonusGrid"></div>
+            <div class="muted small">
+              These bonuses apply when the item is equipped (and they affect derived stats + weapon scaling via effective stats).
+            </div>
+          </div>
+        
+          <button id="customItemSaveBtn" style="margin-top: 0.9rem;">Save Item</button>
         </section>
+
 
         <section class="subcard">
           <h3>Custom Spells</h3>
