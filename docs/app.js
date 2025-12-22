@@ -276,6 +276,16 @@ function bindUI() {
     levelUp();
     renderAll();
   });
+  
+  document.getElementById('customItemCategory').addEventListener('change', () => {
+  // Default equippable: Tools off, others on (user can override)
+  const cat = (document.getElementById('customItemCategory').value || '').toLowerCase();
+  if (!editingCustomItemId) {
+    document.getElementById('customItemEquippable').checked = (cat !== 'tool');
+  }
+  updateCustomItemEditorVisibility();
+});
+
 
   document.getElementById('saveBtn').addEventListener('click', saveCharacter);
   document.getElementById('importInput').addEventListener('change', importCharacter);
@@ -774,6 +784,13 @@ function renderBonusSummary() {
     }
   }
 
+    function updateCustomItemEditorVisibility() {
+      const cat = (document.getElementById('customItemCategory')?.value || '').toLowerCase();
+      const isWeapon = cat === 'weapon';
+      const section = document.getElementById('weaponScalingSection');
+      if (section) section.style.display = isWeapon ? '' : 'none';
+    }
+
 /* --------------------
    Spells / Abilities (merged lists)
 -------------------- */
@@ -969,32 +986,62 @@ function loadCustomItemIntoForm(id) {
   document.getElementById('customItemCategory').value = found?.category || 'Other';
   document.getElementById('customItemTier').value = found?.tier || '';
   document.getElementById('customItemDesc').value = found?.description || '';
-  document.getElementById('customItemEquippable').checked = found ? !!found.equippable : (String(document.getElementById('customItemCategory').value).toLowerCase() !== 'tool');
 
-  // bonuses
+  // Equippable default:
+  if (found) {
+    document.getElementById('customItemEquippable').checked = !!found.equippable;
+  } else {
+    const cat = (document.getElementById('customItemCategory').value || '').toLowerCase();
+    document.getElementById('customItemEquippable').checked = (cat !== 'tool');
+  }
+
+  // AC Bonus
+  document.getElementById('customItemAcBonus').value = String(Number(found?.acBonus || 0));
+
+  // Weapon fields
+  document.getElementById('customItemBaseDamage').value = String(Number(found?.baseDamage || 0));
+  const scaleSet = new Set(Array.isArray(found?.scalesWith) ? found.scalesWith : []);
+  for (const stat of CORE_STATS) {
+    const el = document.getElementById(`scale_${stat}`);
+    if (el) el.checked = scaleSet.has(stat);
+  }
+
+  // Direct stat bonuses
   for (const stat of CORE_STATS) {
     const v = Number(found?.bonuses?.[stat] || 0);
     const el = document.getElementById(`bonus_${stat}`);
     if (el) el.value = String(Number.isFinite(v) ? v : 0);
   }
 
+  updateCustomItemEditorVisibility();
   renderCustomSelectors();
 }
+
 
 function saveCustomItemFromForm() {
   const name = (document.getElementById('customItemName').value || '').trim();
   if (!name) { alert('Custom item needs a name.'); return; }
 
   const category = document.getElementById('customItemCategory').value || 'Other';
-  const tier = (document.getElementById('customItemTier').value || '').trim();
+  const tier = document.getElementById('customItemTier').value || '';
   const description = (document.getElementById('customItemDesc').value || '').trim();
-  let equippable = !!document.getElementById('customItemEquippable').checked;
+  const equippable = !!document.getElementById('customItemEquippable').checked;
 
-  // Tools should default non-equippable; allow override if you want
-  if (String(category).toLowerCase() === 'tool' && equippable) {
-    // allow it, but it will then appear in equipment if categories match
+  // AC bonus (Armor/Headwear)
+  const acBonusRaw = Number(document.getElementById('customItemAcBonus').value || 0);
+  const acBonus = Number.isFinite(acBonusRaw) ? acBonusRaw : 0;
+
+  // Weapon scaling fields
+  const baseDamageRaw = Number(document.getElementById('customItemBaseDamage').value || 0);
+  const baseDamage = Number.isFinite(baseDamageRaw) ? baseDamageRaw : 0;
+
+  const scalesWith = [];
+  for (const stat of CORE_STATS) {
+    const el = document.getElementById(`scale_${stat}`);
+    if (el && el.checked) scalesWith.push(stat);
   }
 
+  // Direct stat bonuses fields
   const bonuses = {};
   for (const stat of CORE_STATS) {
     const n = Number(document.getElementById(`bonus_${stat}`).value || 0);
@@ -1008,6 +1055,9 @@ function saveCustomItemFromForm() {
     description,
     equippable,
     ...(tier ? { tier } : {}),
+    ...(acBonus !== 0 ? { acBonus } : {}),
+    ...(baseDamage !== 0 ? { baseDamage } : {}),
+    ...(scalesWith.length ? { scalesWith } : {}),
     ...(Object.keys(bonuses).length ? { bonuses } : {})
   };
 
@@ -1017,8 +1067,14 @@ function saveCustomItemFromForm() {
   else character.customItems[idx] = obj;
 
   editingCustomItemId = obj.id;
+
+  // If equip-from-inventory-only is on, keep equipment valid
+  enforceEquipInventoryOnly();
+
   renderCustomSelectors();
+  updateCustomItemEditorVisibility();
 }
+
 
 function loadCustomSpellIntoForm(id) {
   const list = character.customSpells || [];
