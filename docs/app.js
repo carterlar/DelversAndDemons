@@ -1,6 +1,7 @@
 const CORE_STATS = ['STR','DEX','CON','INT','WIS','CHA','AGI','LCK','PER','WIL'];
 const STARTING_POINTS = 50;
 const POINTS_PER_LEVEL = 8;
+const SCALING_MULTIPLIERS = { S: 1.00, A: 0.80, B: 0.60, C: 0.40, D: 0.20, E: 0.10 };
 
 const EQUIPMENT_SLOTS = [
   { key: 'Weapon', label: 'Weapon', categories: ['Weapon'] },
@@ -171,6 +172,37 @@ function getEffectiveStats(c) {
     effective[stat] = Number(base[stat] || 0) + Number(bonuses[stat] || 0);
   }
   return { effective, bonuses };
+}
+
+function getEquippedWeaponId(c) {
+  return c?.equipped?.Weapon || null;
+}
+
+function computeWeaponDamage(c) {
+  const weaponId = getEquippedWeaponId(c);
+  if (!weaponId) return { weaponId: null, baseDamage: 0, bonusDamage: 0, total: 0 };
+
+  const it = getItemById(weaponId);
+  if (!it) return { weaponId, baseDamage: 0, bonusDamage: 0, total: 0 };
+
+  const { effective } = getEffectiveStats(c);
+
+  const baseDamage = Number(it.baseDamage || 0);
+  const rank = String(it.scalingRank || '').toUpperCase();
+  const mult = Number(SCALING_MULTIPLIERS[rank] ?? 0);
+
+  const scalesWith = Array.isArray(it.scalesWith) ? it.scalesWith : [];
+  let bonus = 0;
+
+  for (const stat of scalesWith) {
+    if (!CORE_STATS.includes(stat)) continue;
+    bonus += Number(effective[stat] || 0) * mult;
+  }
+
+  const bonusDamage = Math.floor(bonus);
+  const total = Math.floor(baseDamage + bonusDamage);
+
+  return { weaponId, baseDamage, bonusDamage, total };
 }
 
 /* --------------------
@@ -1067,6 +1099,15 @@ function importCharacter(e) {
       const parsed = JSON.parse(String(reader.result || ''));
 
       const next = newCharacter();
+      next.customItems = Array.isArray(parsed.customItems)
+        ? parsed.customItems.filter(x => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.name === 'string')
+        : [];
+      next.customSpells = Array.isArray(parsed.customSpells)
+        ? parsed.customSpells.filter(x => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.name === 'string')
+        : [];
+      next.customAbilities = Array.isArray(parsed.customAbilities)
+        ? parsed.customAbilities.filter(x => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.name === 'string')
+        : [];
       next.name = typeof parsed.name === 'string' ? parsed.name : next.name;
       next.titleId = typeof parsed.titleId === 'string' ? parsed.titleId : next.titleId;
       next.level = safeNumber(parsed.level, next.level);
