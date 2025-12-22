@@ -213,3 +213,22 @@ hr {
 .bonusGrid input {
   width: 100%;
 }
+
+.statToggleGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.statToggleGrid label {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0;
+  user-select: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.35rem 0.5rem;
+  background: #fafafa;
+}
