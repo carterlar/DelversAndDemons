@@ -1148,7 +1148,7 @@ function loadCustomItemIntoForm(id) {
     } else {
       el.value = '';
     }
-
+  }
 
   // Direct stat bonuses
   for (const stat of CORE_STATS) {
