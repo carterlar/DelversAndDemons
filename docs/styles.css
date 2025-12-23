@@ -232,3 +232,28 @@ hr {
   padding: 0.35rem 0.5rem;
   background: #fafafa;
 }
+
+.scalingGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.scalingGrid .scaleCell {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.35rem 0.5rem;
+  background: #fafafa;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.scalingGrid .scaleCell .label {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.scalingGrid select {
+  width: 100%;
+}
