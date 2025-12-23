@@ -269,7 +269,8 @@ function calculateDerived(c) {
 async function init() {
   await loadAdminData();
   bindUI();
-  buildCustomScaleStatGrid();
+  buildCustomScalingGrid();
+  buildCustomBonusGrid();
   buildCustomBonusGrid();
   buildCustomBonusGrid();
   setTab('stats');
@@ -1020,6 +1021,48 @@ function forgetAbility(id) {
 /* --------------------
    Custom Content UI
 -------------------- */
+
+function buildCustomScalingGrid() {
+  const grid = document.getElementById('customItemScalingGrid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+
+  const options = [
+    { v: '', t: '(none)' },
+    { v: 'E', t: 'E' },
+    { v: 'D', t: 'D' },
+    { v: 'C', t: 'C' },
+    { v: 'B', t: 'B' },
+    { v: 'A', t: 'A' },
+    { v: 'S', t: 'S' }
+  ];
+
+  for (const stat of CORE_STATS) {
+    const cell = document.createElement('div');
+    cell.className = 'scaleCell';
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = stat;
+
+    const sel = document.createElement('select');
+    sel.id = `scaleRank_${stat}`;
+
+    for (const o of options) {
+      const opt = document.createElement('option');
+      opt.value = o.v;
+      opt.textContent = o.t;
+      sel.appendChild(opt);
+    }
+
+    cell.appendChild(label);
+    cell.appendChild(sel);
+    grid.appendChild(cell);
+  }
+}
+
+
 function renderCustomSelectors() {
   // Items
   const itemSel = document.getElementById('customItemSelect');
@@ -1085,12 +1128,27 @@ function loadCustomItemIntoForm(id) {
   document.getElementById('customItemAcBonus').value = String(Number(found?.acBonus || 0));
 
   // Weapon fields
+  // Weapon fields
   document.getElementById('customItemBaseDamage').value = String(Number(found?.baseDamage || 0));
-  const scaleSet = new Set(Array.isArray(found?.scalesWith) ? found.scalesWith : []);
+
+  // Weapon scaling per-stat dropdowns:
+  // Prefer new format scalingByStat, fall back to old scalesWith + tier for legacy custom items.
+  const byStat = (found?.scalingByStat && typeof found.scalingByStat === 'object') ? found.scalingByStat : null;
+  const legacyRank = String(found?.scalingRank || found?.tier || '').toUpperCase();
+  const legacySet = new Set(Array.isArray(found?.scalesWith) ? found.scalesWith : []);
+
   for (const stat of CORE_STATS) {
-    const el = document.getElementById(`scale_${stat}`);
-    if (el) el.checked = scaleSet.has(stat);
-  }
+    const el = document.getElementById(`scaleRank_${stat}`);
+    if (!el) continue;
+
+    if (byStat && typeof byStat[stat] === 'string') {
+      el.value = String(byStat[stat]).toUpperCase();
+    } else if (legacySet.has(stat) && legacyRank) {
+      el.value = legacyRank;
+    } else {
+      el.value = '';
+    }
+
 
   // Direct stat bonuses
   for (const stat of CORE_STATS) {
@@ -1143,7 +1201,7 @@ function saveCustomItemFromForm() {
     ...(tier ? { tier } : {}),
     ...(acBonus !== 0 ? { acBonus } : {}),
     ...(baseDamage !== 0 ? { baseDamage } : {}),
-    ...(scalesWith.length ? { scalesWith } : {}),
+    ...(hasScalingByStat ? { scalingByStat } : {}),
     ...(Object.keys(bonuses).length ? { bonuses } : {})
   };
 
