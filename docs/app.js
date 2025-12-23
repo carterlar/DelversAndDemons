@@ -634,6 +634,59 @@ function enforceEquipInventoryOnly() {
   }
 }
 
+function formatWeaponBonusDamageLine(c, weaponItem) {
+  if (!weaponItem) return 'Bonus Damage: +0';
+
+  // Uses computeWeaponDamage(c) you added earlier (tier fallback included)
+  const dmg = computeWeaponDamage(c);
+
+  // If this weapon isn't the equipped weapon for some reason, compute from its own fields:
+  // (Usually unnecessary, but harmless if you want to be robust)
+  if (!dmg || dmg.weaponId !== weaponItem.id) {
+    // Minimal fallback: compute from item directly
+    const { effective } = getEffectiveStats(c);
+    const rank = String(weaponItem.scalingRank || weaponItem.tier || '').toUpperCase();
+    const mult = Number(SCALING_MULTIPLIERS?.[rank] ?? 0);
+    const scalesWith = Array.isArray(weaponItem.scalesWith) ? weaponItem.scalesWith : [];
+
+    let bonus = 0;
+    for (const stat of scalesWith) {
+      if (!CORE_STATS.includes(stat)) continue;
+      bonus += Number(effective[stat] || 0) * mult;
+    }
+    const bonusDamage = Math.floor(bonus);
+    return `Bonus Damage: +${bonusDamage}${rank ? ` (Rank ${rank})` : ''}`;
+  }
+
+  // If no stats toggled, bonus is 0 even if tier is S — that’s desired
+  return `Bonus Damage: +${dmg.bonusDamage}${dmg.rank ? ` (Rank ${dmg.rank})` : ''}`;
+}
+
+function formatItemBonusText(slotKey, c, item) {
+  if (!item) return '';
+
+  // Weapon
+  if (slotKey === 'Weapon') {
+    return formatWeaponBonusDamageLine(c, item);
+  }
+
+  // Armor / Headwear
+  if (slotKey === 'Armor' || slotKey === 'Headwear') {
+    const ac = Number(item.acBonus || 0);
+    const acSafe = Number.isFinite(ac) ? ac : 0;
+    return `Bonus AC: +${acSafe.toFixed(2)}`;
+  }
+
+  // Everything else: direct stat bonuses (optional)
+  if (item.bonuses && typeof item.bonuses === 'object') {
+    const s = formatBonuses(item.bonuses);
+    return s ? `Bonuses: ${s}` : 'No bonuses.';
+  }
+
+  return 'No bonuses.';
+}
+
+
 function renderEquipment() {
   const container = document.getElementById('equipmentContainer');
   container.innerHTML = '';
@@ -691,16 +744,20 @@ function renderEquipment() {
     details.className = 'muted small';
     details.style.marginTop = '0.5rem';
 
-    if (currentId && !currentItem) {
+        if (currentId && !currentItem) {
       details.textContent = `Unknown equipped item (${currentId}) — missing from admin/custom items.`;
     } else if (currentItem) {
-      const bonusStr = currentItem.bonuses ? `Bonuses: ${formatBonuses(currentItem.bonuses)}` : 'No bonuses.';
       const owned = getInventoryQty(currentId);
       const ownedNote = onlyOwned ? ` • Owned: ${owned}` : '';
-      details.textContent = `${currentItem.category}${currentItem.tier ? ` • Tier ${currentItem.tier}` : ''}${ownedNote} — ${bonusStr}`;
+
+      const bonusText = formatItemBonusText(slot.key, character, currentItem);
+
+      details.textContent =
+        `${currentItem.category}${currentItem.tier ? ` • Tier ${currentItem.tier}` : ''}${ownedNote} — ${bonusText}`;
     } else {
       details.textContent = `Allowed: ${slot.categories.join(', ')}${onlyOwned ? ' • (filtered to inventory)' : ''}`;
     }
+
 
     box.appendChild(h);
     box.appendChild(select);
