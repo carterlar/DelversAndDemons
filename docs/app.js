@@ -178,32 +178,67 @@ function getEquippedWeaponId(c) {
   return c?.equipped?.Weapon || null;
 }
 
-function computeWeaponDamage(c) {
-  const weaponId = getEquippedWeaponId(c);
-  if (!weaponId) return { weaponId: null, baseDamage: 0, bonusDamage: 0, total: 0 };
-
-  const it = getItemById(weaponId);
-  if (!it) return { weaponId, baseDamage: 0, bonusDamage: 0, total: 0 };
+function computeScalingBonusFromItem(c, item) {
+  if (!item) return { bonus: 0, breakdown: [] };
 
   const { effective } = getEffectiveStats(c);
 
-  const baseDamage = Number(it.baseDamage || 0);
-  const rank = String(it.scalingRank || '').toUpperCase();
-  const mult = Number(SCALING_MULTIPLIERS[rank] ?? 0);
+  // New format: per-stat ranks
+  const byStat = (item.scalingByStat && typeof item.scalingByStat === 'object')
+    ? item.scalingByStat
+    : null;
 
-  const scalesWith = Array.isArray(it.scalesWith) ? it.scalesWith : [];
+  // Old format: same rank for all listed stats
+  const defaultRank = String(item.scalingRank || item.tier || '').toUpperCase();
+  const defaultMult = Number(SCALING_MULTIPLIERS[defaultRank] ?? 0);
+
   let bonus = 0;
+  const breakdown = [];
 
-  for (const stat of scalesWith) {
-    if (!CORE_STATS.includes(stat)) continue;
-    bonus += Number(effective[stat] || 0) * mult;
+  if (byStat) {
+    for (const [stat, rankRaw] of Object.entries(byStat)) {
+      if (!CORE_STATS.includes(stat)) continue;
+      const rank = String(rankRaw || '').toUpperCase();
+      const mult = Number(SCALING_MULTIPLIERS[rank] ?? 0);
+      const contrib = Number(effective[stat] || 0) * mult;
+      if (mult !== 0 && contrib !== 0) {
+        bonus += contrib;
+        breakdown.push({ stat, rank, mult, contrib });
+      }
+    }
+  } else {
+    const scalesWith = Array.isArray(item.scalesWith) ? item.scalesWith : [];
+    for (const stat of scalesWith) {
+      if (!CORE_STATS.includes(stat)) continue;
+      const contrib = Number(effective[stat] || 0) * defaultMult;
+      if (defaultMult !== 0 && contrib !== 0) {
+        bonus += contrib;
+        breakdown.push({ stat, rank: defaultRank, mult: defaultMult, contrib });
+      }
+    }
   }
+
+  return { bonus, breakdown };
+}
+
+
+function computeWeaponDamage(c) {
+  const weaponId = c?.equipped?.Weapon || null;
+  if (!weaponId) return { weaponId: null, baseDamage: 0, bonusDamage: 0, total: 0, breakdown: [] };
+
+  const it = getItemById(weaponId);
+  if (!it) return { weaponId, baseDamage: 0, bonusDamage: 0, total: 0, breakdown: [] };
+
+  const baseDamage = Number(it.baseDamage || 0);
+
+  const { bonus, breakdown } = computeScalingBonusFromItem(c, it);
 
   const bonusDamage = Math.floor(bonus);
   const total = Math.floor(baseDamage + bonusDamage);
 
-  return { weaponId, baseDamage, bonusDamage, total };
+  return { weaponId, baseDamage, bonusDamage, total, breakdown };
 }
+
 
 /* --------------------
    Derived Stats
@@ -637,30 +672,24 @@ function enforceEquipInventoryOnly() {
 function formatWeaponBonusDamageLine(c, weaponItem) {
   if (!weaponItem) return 'Bonus Damage: +0';
 
-  // Uses computeWeaponDamage(c) you added earlier (tier fallback included)
   const dmg = computeWeaponDamage(c);
+  const bonus = dmg?.bonusDamage ?? 0;
 
-  // If this weapon isn't the equipped weapon for some reason, compute from its own fields:
-  // (Usually unnecessary, but harmless if you want to be robust)
-  if (!dmg || dmg.weaponId !== weaponItem.id) {
-    // Minimal fallback: compute from item directly
-    const { effective } = getEffectiveStats(c);
-    const rank = String(weaponItem.scalingRank || weaponItem.tier || '').toUpperCase();
-    const mult = Number(SCALING_MULTIPLIERS?.[rank] ?? 0);
-    const scalesWith = Array.isArray(weaponItem.scalesWith) ? weaponItem.scalesWith : [];
-
-    let bonus = 0;
-    for (const stat of scalesWith) {
-      if (!CORE_STATS.includes(stat)) continue;
-      bonus += Number(effective[stat] || 0) * mult;
-    }
-    const bonusDamage = Math.floor(bonus);
-    return `Bonus Damage: +${bonusDamage}${rank ? ` (Rank ${rank})` : ''}`;
+  let tail = '';
+  if (Array.isArray(dmg?.breakdown) && dmg.breakdown.length) {
+    const parts = dmg.breakdown
+      .map(x => `${x.stat}×${x.rank}`)
+      .join(' + ');
+    tail = ` (${parts})`;
+  } else {
+    // If no breakdown, still show tier if present
+    const r = String(weaponItem.scalingRank || weaponItem.tier || '').toUpperCase();
+    if (r) tail = ` (Rank ${r})`;
   }
 
-  // If no stats toggled, bonus is 0 even if tier is S — that’s desired
-  return `Bonus Damage: +${dmg.bonusDamage}${dmg.rank ? ` (Rank ${dmg.rank})` : ''}`;
+  return `Bonus Damage: +${bonus}${tail}`;
 }
+
 
 function formatItemBonusText(slotKey, c, item) {
   if (!item) return '';
