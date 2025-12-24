@@ -1,16 +1,1 @@
-[
-  {
-  "id": "item_rapier",
-  "name": "Rapier",
-  "category": "Weapon",
-  "tier": "S",
-  "equippable": true,
-  "baseDamage": 5,
-  "scalingByStat": {
-    "DEX": "S",
-    "STR": "C"
-  },
-  "description": "A precise thrusting blade."
-}
 
-]
