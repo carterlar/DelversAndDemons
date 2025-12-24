@@ -1,3 +1,4 @@
+
 const CORE_STATS = ['STR','DEX','CON','INT','WIS','CHA','AGI','LCK','PER','WIL'];
 const STARTING_POINTS = 50;
 const POINTS_PER_LEVEL = 8;
