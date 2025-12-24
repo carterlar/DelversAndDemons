@@ -1,5 +1,11 @@
 [
   { "id": "none", "label": "— No Title —" },
   { "id": "novice", "label": "Novice Adventurer" },
-  { "id": "veteran", "label": "Veteran Mercenary" }
+  { "id": "KingMage", "label": "Veteran Mercenary" }
+  { "id": "EmperorFighter", "label": "— No Title —" },
+  { "id": "EmperorMage", "label": "Novice Adventurer" },
+  { "id": "DragonFighter", "label": "Veteran Mercenary" }
+  { "id": "DragonMage", "label": "— No Title —" },
+  { "id": "ContinentalFighter", "label": "Novice Adventurer" },
+  { "id": "ContinentalMage", "label": "Continental level Archmage" }
 ]
