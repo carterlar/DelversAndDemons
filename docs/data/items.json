@@ -12,5 +12,55 @@
   },
   "description": "A precise thrusting blade."
 }
-
+    {
+      "id": "citem_mjjf59r0_po8pv",
+      "name": "Garment of the Legendary Shadow Assassin",
+      "category": "Armor",
+      "description": "",
+      "equippable": true,
+      "tier": "A",
+      "acBonus": 15,
+      "baseDamage": 0,
+      "scalingByStat": {},
+      "bonuses": {
+        "DEX": 20,
+        "CHA": 3,
+        "AGI": 30,
+        "LCK": 10,
+        "PER": 20,
+        "WIL": -10
+      }
+    },
+    {
+      "id": "citem_mjjf86wd_6tx6l",
+      "name": "Bulwark 's Regalia",
+      "category": "Armor",
+      "description": "A sturdy suit of full body armor formed by impossibly hard sheets of tungsten steel. An extraordinary piece of equipment that turns the user into an impenetrable fortress of metal should they have the strength to use it.",
+      "equippable": true,
+      "tier": "A",
+      "acBonus": 200,
+      "baseDamage": 0,
+      "scalingByStat": {},
+      "bonuses": {
+        "STR": -50,
+        "CHA": 50,
+        "WIL": 50
+      }
+    },
+    {
+      "id": "citem_mjjfjry6_ywjuu",
+      "name": "Kensei's Robe",
+      "category": "Armor",
+      "description": "Legend has it that this robe once belonged to the legendary Lord of Blades Hatorashi Kensei of the black lotus clan. Despite no detection of magical influence or enhancements it's affect on any user's ability is clear, and despite its simple fabric from which it is made it appears to have never been harmed in any battle.",
+      "equippable": true,
+      "tier": "S",
+      "acBonus": 0,
+      "baseDamage": 0,
+      "scalingByStat": {},
+      "bonuses": {
+        "STR": 10,
+        "DEX": 30,
+        "AGI": 50
+      }
+    }
 ]
