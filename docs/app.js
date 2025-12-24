@@ -1,7 +1,7 @@
 const CORE_STATS = ['STR','DEX','CON','INT','WIS','CHA','AGI','LCK','PER','WIL'];
 const STARTING_POINTS = 50;
 const POINTS_PER_LEVEL = 8;
-const SCALING_MULTIPLIERS = { S: 1.00, A: 0.80, B: 0.60, C: 0.40, D: 0.20, E: 0.10 };
+const SCALING_MULTIPLIERS = { "S": 1.00, "A": 0.80, "B": 0.60, "C": 0.40, "D": 0.20, "E": 0.10 };
 
 const EQUIPMENT_SLOTS = [
   { key: 'Weapon', label: 'Weapon', categories: ['Weapon'] },
@@ -14,6 +14,7 @@ const EQUIPMENT_SLOTS = [
   { key: 'Accessory1', label: 'Accessory 1', categories: ['Accessory'] },
   { key: 'Accessory2', label: 'Accessory 2', categories: ['Accessory'] }
 ];
+
 
 let titles = [];
 let adminSpells = [];
