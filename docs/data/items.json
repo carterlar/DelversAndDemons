@@ -12,7 +12,7 @@
   },
   "description": "A precise thrusting blade."
 }
-    {
+  {
       "id": "citem_mjjf59r0_po8pv",
       "name": "Garment of the Legendary Shadow Assassin",
       "category": "Armor",
@@ -31,7 +31,7 @@
         "WIL": -10
       }
     },
-    {
+  {
       "id": "citem_mjjf86wd_6tx6l",
       "name": "Bulwark 's Regalia",
       "category": "Armor",
@@ -47,7 +47,7 @@
         "WIL": 50
       }
     },
-    {
+  {
       "id": "citem_mjjfjry6_ywjuu",
       "name": "Kensei's Robe",
       "category": "Armor",
@@ -62,5 +62,5 @@
         "DEX": 30,
         "AGI": 50
       }
-    }
+  },
 ]
