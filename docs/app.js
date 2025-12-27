@@ -267,27 +267,37 @@ function calculateDerived(c) {
    Init / Load admin data
 -------------------- */
 async function init() {
-  await loadAdminData();
-  bindUI();
-  buildCustomScalingGrid();
-  buildCustomBonusGrid();
-  buildCustomBonusGrid();
-  buildCustomBonusGrid();
-  setTab('stats');
-  renderAll();
+  try {
+    await loadAdminData();
+    bindUI();
+    
+    // Only run these if the elements actually exist in your HTML
+    if(document.getElementById('customItemScaleStatGrid')) buildCustomScaleStatGrid();
+    if(document.getElementById('customItemBonusGrid')) buildCustomBonusGrid();
+    if(document.getElementById('customScalingGrid')) buildCustomScalingGrid();
+
+    setTab('stats');
+    renderAll();
+    console.log("App Initialized. Items loaded:", adminItems.length);
+  } catch (err) {
+    console.error("Initialization failed:", err);
+  }
 }
 
 async function loadAdminData() {
-  const [t, sp, ab, it] = await Promise.all([
+  // Using Promise.allSettled ensures that if one file (like titles.json) 
+  // is missing, the items.json still loads.
+  const results = await Promise.allSettled([
     fetchJson('data/titles.json'),
     fetchJson('data/spells.json'),
     fetchJson('data/abilities.json'),
     fetchJson('data/items.json')
   ]);
-  titles = t;
-  adminSpells = sp;
-  adminAbilities = ab;
-  adminItems = it;
+
+  titles = results[0].status === 'fulfilled' ? results[0].value : [];
+  adminSpells = results[1].status === 'fulfilled' ? results[1].value : [];
+  adminAbilities = results[2].status === 'fulfilled' ? results[2].value : [];
+  adminItems = results[3].status === 'fulfilled' ? results[3].value : [];
 }
 
 async function fetchJson(path) {
