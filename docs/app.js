@@ -1170,53 +1170,46 @@ function saveCustomItemFromForm() {
   const tier = document.getElementById('customItemTier').value || '';
   const description = (document.getElementById('customItemDesc').value || '').trim();
   const equippable = !!document.getElementById('customItemEquippable').checked;
+  const acBonus = Number(document.getElementById('customItemAcBonus').value || 0);
+  const baseDamage = Number(document.getElementById('customItemBaseDamage').value || 0);
 
-  // AC bonus (Armor/Headwear)
-  const acBonusRaw = Number(document.getElementById('customItemAcBonus').value || 0);
-  const acBonus = Number.isFinite(acBonusRaw) ? acBonusRaw : 0;
-
-  // Weapon scaling fields
-  const baseDamageRaw = Number(document.getElementById('customItemBaseDamage').value || 0);
-  const baseDamage = Number.isFinite(baseDamageRaw) ? baseDamageRaw : 0;
-
-  const scalesWith = [];
+  // 1. GATHER SCALING DATA (This was the main part missing)
+  const scalingByStat = {};
   for (const stat of CORE_STATS) {
-    const el = document.getElementById(`scale_${stat}`);
-    if (el && el.checked) scalesWith.push(stat);
+    const val = document.getElementById(`scaleRank_${stat}`).value;
+    if (val) scalingByStat[stat] = val;
   }
 
-  // Direct stat bonuses fields
+  // 2. GATHER DIRECT BONUSES
   const bonuses = {};
   for (const stat of CORE_STATS) {
     const n = Number(document.getElementById(`bonus_${stat}`).value || 0);
-    if (Number.isFinite(n) && n !== 0) bonuses[stat] = n;
+    if (n !== 0) bonuses[stat] = n;
   }
 
+  // 3. CONSTRUCT OBJECT
   const obj = {
     id: editingCustomItemId || makeCustomId('citem'),
     name,
     category,
     description,
     equippable,
-    ...(tier ? { tier } : {}),
-    ...(acBonus !== 0 ? { acBonus } : {}),
-    ...(baseDamage !== 0 ? { baseDamage } : {}),
-    ...(hasScalingByStat ? { scalingByStat } : {}),
-    ...(Object.keys(bonuses).length ? { bonuses } : {})
+    tier,
+    acBonus,
+    baseDamage,
+    scalingByStat,
+    bonuses
   };
 
+  // 4. SAVE TO CHARACTER
   character.customItems = Array.isArray(character.customItems) ? character.customItems : [];
   const idx = character.customItems.findIndex(x => x.id === obj.id);
   if (idx === -1) character.customItems.push(obj);
   else character.customItems[idx] = obj;
 
   editingCustomItemId = obj.id;
-
-  // If equip-from-inventory-only is on, keep equipment valid
   enforceEquipInventoryOnly();
-
-  renderCustomSelectors();
-  updateCustomItemEditorVisibility();
+  renderAll(); // Refresh the UI lists
 }
 
 
